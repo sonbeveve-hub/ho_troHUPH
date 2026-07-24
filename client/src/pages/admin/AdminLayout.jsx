@@ -22,11 +22,8 @@ export default function AdminLayout({ admin, onLoggedOut }) {
   return (
     <div className="min-h-screen bg-[#F5F5FA] flex">
       <aside className="w-60 shrink-0 bg-white border-r border-slate-100 flex flex-col py-6 px-4">
-        <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="h-8 w-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-bold text-sm">
-            S
-          </div>
-          <span className="font-semibold text-slate-900">Hỗ trợ Admin</span>
+        <div className="flex items-center px-2 mb-8">
+          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-9 w-auto" />
         </div>
 
         <nav className="flex-1 space-y-1">

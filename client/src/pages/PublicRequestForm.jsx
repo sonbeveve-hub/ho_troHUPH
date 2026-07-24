@@ -102,6 +102,7 @@ export default function PublicRequestForm() {
     <div className="min-h-screen bg-[#F5F5FA] px-4 py-10">
       <div className="max-w-xl mx-auto">
         <div className="mb-6 text-center">
+          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-14 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-slate-900">Gửi yêu cầu hỗ trợ</h1>
           <p className="mt-1 text-slate-500">
             Điền thông tin bên dưới, không cần đăng nhập. Chúng tôi sẽ liên hệ qua email.

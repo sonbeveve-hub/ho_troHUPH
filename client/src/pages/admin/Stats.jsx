@@ -64,7 +64,7 @@ export default function Stats() {
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Theo loại yêu cầu</h2>
-          <CategoryBar data={summary.byRequestType} color="#8B7BF4" />
+          <CategoryBar data={summary.byRequestType} color="#3FAE7C" />
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Số yêu cầu theo ngày (30 ngày gần nhất)</h2>

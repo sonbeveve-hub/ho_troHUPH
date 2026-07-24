@@ -1,6 +1,6 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const BRAND = '#6C5CE7';
+const BRAND = '#1B7A4D';
 
 export default function TimeSeries({ data }) {
   if (data.length === 0) {

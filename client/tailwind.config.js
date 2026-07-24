@@ -5,13 +5,13 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#F2F0FE',
-          100: '#E5E1FD',
-          200: '#C7BFFB',
-          400: '#8B7BF4',
-          500: '#6C5CE7',
-          600: '#5B4BDB',
-          700: '#4A3BC2',
+          50: '#EAFBF2',
+          100: '#CFF3E0',
+          200: '#9FE6C0',
+          400: '#3FAE7C',
+          500: '#1F8F58',
+          600: '#1B7A4D',
+          700: '#146B42',
         },
       },
       borderRadius: {

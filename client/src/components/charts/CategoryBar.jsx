@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const BRAND = '#6C5CE7';
+const BRAND = '#1B7A4D';
 
 export default function CategoryBar({ data, color = BRAND }) {
   const rows = data.filter((d) => d.label).slice(0, 8);
