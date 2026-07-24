@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
-import { StatusBadge, PriorityBadge } from '../../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge } from '../../components/StatusBadge.jsx';
 
 const TABS = [
   { value: '', label: 'Tất cả' },
@@ -145,7 +145,7 @@ export default function RequestsList() {
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
                 <StatusBadge status={r.status} />
-                <PriorityBadge priority={r.priority} />
+                <ProcessingTimeBadge name={r.processing_time_name} />
                 <span className="font-mono">{r.request_code}</span>
                 <span>· {r.department_name}</span>
                 {r.attachment_count > 0 && (

@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/admin/requests', label: 'Yêu cầu', icon: TicketsIcon },
   { to: '/admin/departments', label: 'Đơn vị', icon: DeptIcon },
   { to: '/admin/request-types', label: 'Loại yêu cầu', icon: TypeIcon },
+  { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: ClockIcon },
   { to: '/admin/staff', label: 'Nhân sự', icon: StaffIcon },
 ];
 
@@ -100,6 +101,14 @@ function TypeIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
       <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
+function ClockIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
     </svg>
   );
 }

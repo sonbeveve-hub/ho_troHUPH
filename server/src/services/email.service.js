@@ -58,7 +58,15 @@ export async function sendStatusUpdateEmail(request, newStatus, note) {
   return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
 }
 
-export async function sendSubmissionConfirmationEmail(request, { departmentName, requestTypeName }) {
-  const { subject, html } = submissionConfirmationEmail({ request, departmentName, requestTypeName });
+export async function sendSubmissionConfirmationEmail(
+  request,
+  { departmentName, requestTypeName, processingTimeName }
+) {
+  const { subject, html } = submissionConfirmationEmail({
+    request,
+    departmentName,
+    requestTypeName,
+    processingTimeName,
+  });
   return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
 }

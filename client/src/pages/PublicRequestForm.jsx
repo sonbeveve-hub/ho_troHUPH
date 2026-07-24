@@ -3,24 +3,21 @@ import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
 
-const PRIORITIES = [
-  { value: 'gap', label: 'Gấp' },
-  { value: 'binh_thuong', label: 'Bình thường' },
-  { value: 'khong_gap', label: 'Không gấp' },
-];
+const EMPTY_FORM = {
+  requesterName: '',
+  departmentId: '',
+  requestTypeId: '',
+  processingTimeId: '',
+  description: '',
+  website: '', // honeypot
+};
 
 export default function PublicRequestForm() {
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
+  const [processingTimes, setProcessingTimes] = useState([]);
 
-  const [form, setForm] = useState({
-    requesterName: '',
-    departmentId: '',
-    requestTypeId: '',
-    priority: 'binh_thuong',
-    description: '',
-    website: '', // honeypot
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [email, setEmail] = useState({ email: '', source: 'manual' });
   const [images, setImages] = useState([]);
 
@@ -31,6 +28,7 @@ export default function PublicRequestForm() {
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => setDepartments([]));
     api.get('/request-types').then(setRequestTypes).catch(() => setRequestTypes([]));
+    api.get('/processing-times').then(setProcessingTimes).catch(() => setProcessingTimes([]));
   }, []);
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -44,6 +42,7 @@ export default function PublicRequestForm() {
     }
     if (!form.departmentId) return setError('Vui lòng chọn khoa/phòng/đơn vị.');
     if (!form.requestTypeId) return setError('Vui lòng chọn loại yêu cầu.');
+    if (!form.processingTimeId) return setError('Vui lòng chọn thời gian xử lý mong muốn.');
     if (!form.description.trim() || form.description.trim().length < 5) {
       return setError('Vui lòng mô tả yêu cầu chi tiết hơn.');
     }
@@ -55,7 +54,7 @@ export default function PublicRequestForm() {
       body.append('requesterName', form.requesterName.trim());
       body.append('departmentId', form.departmentId);
       body.append('requestTypeId', form.requestTypeId);
-      body.append('priority', form.priority);
+      body.append('processingTimeId', form.processingTimeId);
       body.append('description', form.description.trim());
       body.append('requesterEmail', email.email);
       body.append('emailSource', email.source);
@@ -86,14 +85,7 @@ export default function PublicRequestForm() {
           <button
             onClick={() => {
               setSuccess(null);
-              setForm({
-                requesterName: '',
-                departmentId: '',
-                requestTypeId: '',
-                priority: 'binh_thuong',
-                description: '',
-                website: '',
-              });
+              setForm(EMPTY_FORM);
               setEmail({ email: '', source: 'manual' });
               setImages([]);
             }}
@@ -187,21 +179,24 @@ export default function PublicRequestForm() {
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Thời gian xử lý mong muốn
             </label>
-            <div className="flex gap-2">
-              {PRIORITIES.map((p) => (
+            <div className="flex flex-wrap gap-2">
+              {processingTimes.map((p) => (
                 <button
-                  key={p.value}
+                  key={p.id}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, priority: p.value }))}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                    form.priority === p.value
+                  onClick={() => setForm((f) => ({ ...f, processingTimeId: String(p.id) }))}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    form.processingTimeId === String(p.id)
                       ? 'border-brand-500 bg-brand-50 text-brand-700'
                       : 'border-slate-300 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  {p.label}
+                  {p.name} ngày
                 </button>
               ))}
+              {processingTimes.length === 0 && (
+                <p className="text-sm text-slate-400">Chưa có tuỳ chọn nào, vui lòng liên hệ quản trị viên.</p>
+              )}
             </div>
           </div>
 

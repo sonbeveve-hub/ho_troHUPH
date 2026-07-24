@@ -10,6 +10,9 @@ export default function Staff() {
   const [newStaff, setNewStaff] = useState({ name: '', email: '', departmentId: '' });
   const [error, setError] = useState('');
 
+  const [editingId, setEditingId] = useState(null);
+  const [editStaff, setEditStaff] = useState({ name: '', email: '', departmentId: '' });
+
   const load = () => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
@@ -38,8 +41,31 @@ export default function Staff() {
     }
   };
 
-  const handleDelete = async (id) => {
-    await api.delete(`/admin/staff/${id}`);
+  const startEdit = (s) => {
+    setEditingId(s.id);
+    setEditStaff({ name: s.name, email: s.email || '', departmentId: s.department_id ? String(s.department_id) : '' });
+    setError('');
+  };
+
+  const saveEdit = async (id) => {
+    setError('');
+    if (!editStaff.name.trim()) return;
+    try {
+      await api.patch(`/admin/staff/${id}`, {
+        name: editStaff.name.trim(),
+        email: editStaff.email.trim() || null,
+        departmentId: editStaff.departmentId || null,
+      });
+      setEditingId(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDelete = async (item) => {
+    if (!confirm(`Xoá "${item.name}"?`)) return;
+    await api.delete(`/admin/staff/${item.id}`);
     load();
   };
 
@@ -95,16 +121,66 @@ export default function Staff() {
 
       <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-100">
         {items.map((s) => (
-          <div key={s.id} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <p className="text-slate-800">{s.name}</p>
-              <p className="text-xs text-slate-400">
-                {s.email || 'chưa có email'} · {s.department_name || 'chưa rõ đơn vị'}
-              </p>
-            </div>
-            <button onClick={() => handleDelete(s.id)} className="text-sm text-red-500 hover:underline">
-              Xoá
-            </button>
+          <div key={s.id} className="px-4 py-3">
+            {editingId === s.id ? (
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  value={editStaff.name}
+                  onChange={(e) => setEditStaff((f) => ({ ...f, name: e.target.value }))}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                  autoFocus
+                />
+                <input
+                  value={editStaff.email}
+                  onChange={(e) => setEditStaff((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="Email"
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+                <select
+                  value={editStaff.departmentId}
+                  onChange={(e) => setEditStaff((f) => ({ ...f, departmentId: e.target.value }))}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                >
+                  <option value="">-- Đơn vị --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="col-span-3 flex gap-2">
+                  <button
+                    onClick={() => saveEdit(s.id)}
+                    className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600"
+                  >
+                    Lưu
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                  >
+                    Huỷ
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-800">{s.name}</p>
+                  <p className="text-xs text-slate-400">
+                    {s.email || 'chưa có email'} · {s.department_name || 'chưa rõ đơn vị'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <button onClick={() => startEdit(s)} className="text-brand-600 hover:underline">
+                    Sửa
+                  </button>
+                  <button onClick={() => handleDelete(s)} className="text-red-500 hover:underline">
+                    Xoá
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-400">Chưa có nhân sự nào.</p>}

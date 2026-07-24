@@ -6,6 +6,7 @@ import { requireAdmin } from '../middleware/requireAdmin.js';
 import {
   importDepartmentsFromExcel,
   importRequestTypesFromExcel,
+  importProcessingTimesFromExcel,
 } from '../services/excelImport.service.js';
 
 export const adminCategoriesRouter = Router();
@@ -83,8 +84,18 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
   router.delete(
     `${path}/:id`,
     asyncHandler(async (req, res) => {
-      db.prepare(`UPDATE ${table} SET active = 0 WHERE id = ?`).run(req.params.id);
-      res.json({ ok: true });
+      try {
+        const info = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(req.params.id);
+        if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
+        res.json({ ok: true });
+      } catch (err) {
+        if (String(err.message).includes('FOREIGN KEY')) {
+          return res.status(409).json({
+            error: 'Không thể xoá vì đang có yêu cầu sử dụng mục này. Hãy dùng "Vô hiệu hoá" thay thế.',
+          });
+        }
+        throw err;
+      }
     })
   );
 
@@ -112,4 +123,11 @@ registerCategoryRoutes(
   'request_types',
   true,
   importRequestTypesFromExcel
+);
+registerCategoryRoutes(
+  adminCategoriesRouter,
+  '/processing-times',
+  'processing_times',
+  false,
+  importProcessingTimesFromExcel
 );

@@ -1,16 +1,27 @@
 import { Router } from 'express';
 import fs from 'node:fs';
+import path from 'node:path';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { sendStatusUpdateEmail } from '../services/email.service.js';
-import { getAttachmentFilePath } from '../services/attachments.service.js';
+import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 
 export const adminRequestsRouter = Router();
 adminRequestsRouter.use(requireAdmin);
 
 const VALID_STATUSES = new Set(['new', 'in_progress', 'done', 'rejected']);
 const PAGE_SIZE = 20;
+
+const LIST_SELECT = `
+  SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name,
+         processing_times.name AS processing_time_name,
+         (SELECT COUNT(*) FROM request_attachments WHERE request_attachments.request_id = requests.id) AS attachment_count
+  FROM requests
+  LEFT JOIN departments ON departments.id = requests.department_id
+  LEFT JOIN request_types ON request_types.id = requests.request_type_id
+  LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
+`;
 
 adminRequestsRouter.get(
   '/',
@@ -45,16 +56,7 @@ adminRequestsRouter.get(
       .get(...params).count;
 
     const rows = db
-      .prepare(
-        `SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name,
-                (SELECT COUNT(*) FROM request_attachments WHERE request_attachments.request_id = requests.id) AS attachment_count
-         FROM requests
-         LEFT JOIN departments ON departments.id = requests.department_id
-         LEFT JOIN request_types ON request_types.id = requests.request_type_id
-         ${where}
-         ORDER BY requests.created_at DESC
-         LIMIT ? OFFSET ?`
-      )
+      .prepare(`${LIST_SELECT} ${where} ORDER BY requests.created_at DESC LIMIT ? OFFSET ?`)
       .all(...params, PAGE_SIZE, (page - 1) * PAGE_SIZE);
 
     res.json({ data: rows, page, pageSize: PAGE_SIZE, total });
@@ -64,15 +66,7 @@ adminRequestsRouter.get(
 adminRequestsRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {
-    const request = db
-      .prepare(
-        `SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name
-         FROM requests
-         LEFT JOIN departments ON departments.id = requests.department_id
-         LEFT JOIN request_types ON request_types.id = requests.request_type_id
-         WHERE requests.id = ?`
-      )
-      .get(req.params.id);
+    const request = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
 
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
@@ -135,5 +129,74 @@ adminRequestsRouter.patch(
     const emailResult = await sendStatusUpdateEmail(updated, status, note);
 
     res.json({ ok: true, emailSent: emailResult.sent });
+  })
+);
+
+adminRequestsRouter.patch(
+  '/:id/details',
+  asyncHandler(async (req, res) => {
+    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+
+    const { requesterName, departmentId, requestTypeId, processingTimeId, requesterEmail, description } =
+      req.body || {};
+
+    const errors = [];
+    if (!requesterName || String(requesterName).trim().length < 2) {
+      errors.push('Vui lòng nhập tên đầy đủ.');
+    }
+    if (!description || String(description).trim().length < 5) {
+      errors.push('Vui lòng mô tả yêu cầu chi tiết hơn.');
+    }
+    if (!requesterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(requesterEmail).trim())) {
+      errors.push('Vui lòng nhập email hợp lệ.');
+    }
+
+    const dept = db.prepare('SELECT id FROM departments WHERE id = ?').get(departmentId);
+    if (!dept) errors.push('Khoa/phòng/đơn vị không hợp lệ.');
+
+    const type = db.prepare('SELECT id FROM request_types WHERE id = ?').get(requestTypeId);
+    if (!type) errors.push('Loại yêu cầu không hợp lệ.');
+
+    const processingTime = db
+      .prepare('SELECT id FROM processing_times WHERE id = ?')
+      .get(processingTimeId);
+    if (!processingTime) errors.push('Thời gian xử lý mong muốn không hợp lệ.');
+
+    if (errors.length) {
+      return res.status(400).json({ error: errors.join(' ') });
+    }
+
+    db.prepare(
+      `UPDATE requests
+       SET requester_name = ?, department_id = ?, request_type_id = ?, processing_time_id = ?,
+           requester_email = ?, description = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(
+      String(requesterName).trim(),
+      Number(departmentId),
+      Number(requestTypeId),
+      Number(processingTimeId),
+      String(requesterEmail).trim(),
+      String(description).trim(),
+      req.params.id
+    );
+
+    res.json({ ok: true });
+  })
+);
+
+adminRequestsRouter.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const existing = db.prepare('SELECT id FROM requests WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+
+    db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
+
+    const dir = path.join(uploadsDir, req.params.id);
+    fs.rm(dir, { recursive: true, force: true }, () => {});
+
+    res.json({ ok: true });
   })
 );

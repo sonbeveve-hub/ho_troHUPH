@@ -57,6 +57,16 @@ publicRouter.get(
 );
 
 publicRouter.get(
+  '/processing-times',
+  asyncHandler(async (req, res) => {
+    const rows = db
+      .prepare('SELECT id, name FROM processing_times WHERE active = 1 ORDER BY CAST(name AS INTEGER), name')
+      .all();
+    res.json(rows);
+  })
+);
+
+publicRouter.get(
   '/staff/lookup',
   asyncHandler(async (req, res) => {
     const { name, department_id: departmentId } = req.query;
@@ -69,7 +79,6 @@ publicRouter.get(
 );
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PRIORITIES = new Set(['gap', 'binh_thuong', 'khong_gap']);
 const EMAIL_SOURCES = new Set(['auto', 'picked', 'manual']);
 
 publicRouter.post(
@@ -81,7 +90,7 @@ publicRouter.post(
       requesterName,
       departmentId,
       requestTypeId,
-      priority,
+      processingTimeId,
       description,
       requesterEmail,
       emailSource,
@@ -111,8 +120,8 @@ publicRouter.post(
     if (!requestTypeId || !Number.isInteger(Number(requestTypeId))) {
       errors.push('Vui lòng chọn loại yêu cầu.');
     }
-    if (!PRIORITIES.has(priority)) {
-      errors.push('Vui lòng chọn mức độ ưu tiên hợp lệ.');
+    if (!processingTimeId || !Number.isInteger(Number(processingTimeId))) {
+      errors.push('Vui lòng chọn thời gian xử lý mong muốn.');
     }
     if (!description || String(description).trim().length < 5) {
       errors.push('Vui lòng mô tả yêu cầu chi tiết hơn.');
@@ -134,13 +143,18 @@ publicRouter.post(
       .get(requestTypeId);
     if (!type) errors.push('Loại yêu cầu không hợp lệ.');
 
+    const processingTime = db
+      .prepare('SELECT id, name FROM processing_times WHERE id = ? AND active = 1')
+      .get(processingTimeId);
+    if (!processingTime) errors.push('Thời gian xử lý mong muốn không hợp lệ.');
+
     if (errors.length) {
       return res.status(400).json({ error: errors.join(' ') });
     }
 
     const insert = db.prepare(`
       INSERT INTO requests
-        (request_code, requester_name, department_id, request_type_id, priority,
+        (request_code, requester_name, department_id, request_type_id, processing_time_id,
          description, requester_email, email_source, status, ip_address)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
     `);
@@ -150,7 +164,7 @@ publicRouter.post(
       String(requesterName).trim(),
       Number(departmentId),
       Number(requestTypeId),
-      priority,
+      Number(processingTimeId),
       String(description).trim(),
       String(requesterEmail).trim(),
       emailSource,
@@ -174,10 +188,9 @@ publicRouter.post(
         request_code: requestCode,
         requester_name: String(requesterName).trim(),
         requester_email: String(requesterEmail).trim(),
-        priority,
         description: String(description).trim(),
       },
-      { departmentName: dept.name, requestTypeName: type.name }
+      { departmentName: dept.name, requestTypeName: type.name, processingTimeName: processingTime.name }
     );
 
     res.status(201).json({ id: info.lastInsertRowid, requestCode });

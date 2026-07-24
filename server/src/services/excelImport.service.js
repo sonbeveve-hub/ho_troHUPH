@@ -128,3 +128,7 @@ export function importDepartmentsFromExcel(buffer) {
 export function importRequestTypesFromExcel(buffer) {
   return importSimpleCategory(buffer, 'request_types', true);
 }
+
+export function importProcessingTimesFromExcel(buffer) {
+  return importSimpleCategory(buffer, 'processing_times', false);
+}

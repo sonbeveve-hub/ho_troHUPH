@@ -5,12 +5,6 @@ const STATUS_META = {
   rejected: { label: 'Từ chối', className: 'bg-red-50 text-red-700' },
 };
 
-const PRIORITY_META = {
-  gap: { label: 'Gấp', className: 'bg-rose-50 text-rose-700' },
-  binh_thuong: { label: 'Bình thường', className: 'bg-blue-50 text-blue-700' },
-  khong_gap: { label: 'Không gấp', className: 'bg-emerald-50 text-emerald-700' },
-};
-
 export function StatusBadge({ status }) {
   const meta = STATUS_META[status] || { label: status, className: 'bg-slate-100 text-slate-600' };
   return (
@@ -20,13 +14,13 @@ export function StatusBadge({ status }) {
   );
 }
 
-export function PriorityBadge({ priority }) {
-  const meta = PRIORITY_META[priority] || { label: priority, className: 'bg-slate-100 text-slate-600' };
+export function ProcessingTimeBadge({ name }) {
+  if (!name) return null;
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}>
-      {meta.label}
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-violet-50 text-violet-700">
+      {name} ngày
     </span>
   );
 }
 
-export { STATUS_META, PRIORITY_META };
+export { STATUS_META };

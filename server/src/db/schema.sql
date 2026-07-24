@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS request_types (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS processing_times (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS staff (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -38,7 +45,7 @@ CREATE TABLE IF NOT EXISTS requests (
   requester_name TEXT NOT NULL,
   department_id INTEGER REFERENCES departments(id),
   request_type_id INTEGER REFERENCES request_types(id),
-  priority TEXT NOT NULL CHECK (priority IN ('gap','binh_thuong','khong_gap')),
+  processing_time_id INTEGER REFERENCES processing_times(id),
   description TEXT NOT NULL,
   requester_email TEXT NOT NULL,
   email_source TEXT NOT NULL CHECK (email_source IN ('auto','picked','manual')),
@@ -51,6 +58,8 @@ CREATE TABLE IF NOT EXISTS requests (
 CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_department ON requests(department_id);
 CREATE INDEX IF NOT EXISTS idx_requests_type ON requests(request_type_id);
+-- idx_requests_processing_time được tạo trong migrate.js (sau khi đảm bảo cột
+-- processing_time_id tồn tại) để không phá vỡ nâng cấp từ schema cũ (còn cột priority).
 CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at);
 
 CREATE TABLE IF NOT EXISTS request_status_history (

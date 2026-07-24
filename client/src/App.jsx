@@ -9,6 +9,7 @@ import RequestsList from './pages/admin/RequestsList.jsx';
 import RequestDetail from './pages/admin/RequestDetail.jsx';
 import Departments from './pages/admin/Departments.jsx';
 import RequestTypes from './pages/admin/RequestTypes.jsx';
+import ProcessingTimes from './pages/admin/ProcessingTimes.jsx';
 import Staff from './pages/admin/Staff.jsx';
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="requests/:id" element={<RequestDetail />} />
         <Route path="departments" element={<Departments />} />
         <Route path="request-types" element={<RequestTypes />} />
+        <Route path="processing-times" element={<ProcessingTimes />} />
         <Route path="staff" element={<Staff />} />
       </Route>
 
