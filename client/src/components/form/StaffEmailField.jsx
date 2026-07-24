@@ -87,7 +87,7 @@ export default function StaffEmailField({ name, departmentId, value, onChange })
       <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
       <input
         type="email"
-        placeholder="ban@donvi.gov.vn"
+        placeholder="mail@huph.edu.vn"
         value={mode === 'manual' ? manualEmail : value}
         onChange={(e) => {
           setManualEmail(e.target.value);
