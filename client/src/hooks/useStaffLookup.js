@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useDebounce } from './useDebounce.js';
 
-export function useStaffLookup(name, departmentId) {
+export function useStaffLookup(name) {
   const debouncedName = useDebounce(name, 400);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,6 @@ export function useStaffLookup(name, departmentId) {
     setLoading(true);
 
     const params = new URLSearchParams({ name: trimmed });
-    if (departmentId) params.set('department_id', departmentId);
 
     api
       .get(`/staff/lookup?${params.toString()}`)
@@ -35,7 +34,7 @@ export function useStaffLookup(name, departmentId) {
     return () => {
       cancelled = true;
     };
-  }, [debouncedName, departmentId]);
+  }, [debouncedName]);
 
   return { matches, loading };
 }

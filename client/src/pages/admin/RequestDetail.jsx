@@ -287,6 +287,14 @@ export default function RequestDetail() {
                   </dd>
                 </div>
               )}
+              <div className="col-span-2">
+                <dt className="text-slate-400">Xác nhận từ người gửi</dt>
+                <dd className={request.requester_confirmed_at ? 'text-emerald-700' : 'text-slate-400'}>
+                  {request.requester_confirmed_at
+                    ? `✓ Đã xác nhận lúc ${new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}`
+                    : 'Chưa xác nhận'}
+                </dd>
+              </div>
             </dl>
 
             <div className="mt-4">

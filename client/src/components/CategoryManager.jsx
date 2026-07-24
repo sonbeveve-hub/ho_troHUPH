@@ -78,6 +78,11 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
     }
   };
 
+  const move = async (item, direction) => {
+    await api.patch(`${apiBase}/${item.id}/move`, { direction });
+    load();
+  };
+
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
@@ -116,7 +121,9 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
       {items.length > 0 && <p className="text-xs text-slate-400 mb-2">{items.length} mục</p>}
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
-        {visibleItems.map((item) => (
+        {visibleItems.map((item, visibleIndex) => {
+          const overallIndex = (page - 1) * PAGE_SIZE + visibleIndex;
+          return (
           <div key={item.id} className="px-4 py-3">
             {editingId === item.id ? (
               <div className="space-y-2">
@@ -151,7 +158,25 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => move(item, 'up')}
+                    disabled={overallIndex === 0}
+                    title="Chuyển lên"
+                    className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => move(item, 'down')}
+                    disabled={overallIndex === items.length - 1}
+                    title="Chuyển xuống"
+                    className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <div className="min-w-0 flex-1">
                   <p className={item.active ? 'text-slate-800' : 'text-slate-400 line-through'}>
                     {item.name}
                   </p>
@@ -171,7 +196,8 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
         {items.length === 0 && (
           <p className="px-4 py-6 text-sm text-slate-400">Chưa có {title.toLowerCase()} nào.</p>
         )}

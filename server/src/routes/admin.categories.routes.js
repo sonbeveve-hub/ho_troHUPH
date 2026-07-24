@@ -18,7 +18,7 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
   router.get(
     path,
     asyncHandler(async (req, res) => {
-      const rows = db.prepare(`SELECT * FROM ${table} ORDER BY name`).all();
+      const rows = db.prepare(`SELECT * FROM ${table} ORDER BY sort_order, id`).all();
       res.json(rows);
     })
   );
@@ -30,12 +30,17 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
       if (!name || !String(name).trim()) {
         return res.status(400).json({ error: 'Vui lòng nhập tên.' });
       }
+      const nextSortOrder = db
+        .prepare(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`)
+        .get().next;
       try {
         const info = hasDescription
           ? db
-              .prepare(`INSERT INTO ${table} (name, description) VALUES (?, ?)`)
-              .run(String(name).trim(), description || null)
-          : db.prepare(`INSERT INTO ${table} (name) VALUES (?)`).run(String(name).trim());
+              .prepare(`INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?)`)
+              .run(String(name).trim(), description || null, nextSortOrder)
+          : db
+              .prepare(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`)
+              .run(String(name).trim(), nextSortOrder);
         res.status(201).json({ id: info.lastInsertRowid });
       } catch (err) {
         if (String(err.message).includes('UNIQUE')) {
@@ -43,6 +48,37 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
         }
         throw err;
       }
+    })
+  );
+
+  router.patch(
+    `${path}/:id/move`,
+    asyncHandler(async (req, res) => {
+      const { direction } = req.body || {};
+      if (!['up', 'down'].includes(direction)) {
+        return res.status(400).json({ error: 'Hướng di chuyển không hợp lệ.' });
+      }
+
+      const current = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
+      if (!current) return res.status(404).json({ error: 'Không tìm thấy.' });
+
+      const neighbor =
+        direction === 'up'
+          ? db
+              .prepare(`SELECT * FROM ${table} WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1`)
+              .get(current.sort_order)
+          : db
+              .prepare(`SELECT * FROM ${table} WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1`)
+              .get(current.sort_order);
+
+      if (neighbor) {
+        db.transaction(() => {
+          db.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`).run(neighbor.sort_order, current.id);
+          db.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`).run(current.sort_order, neighbor.id);
+        })();
+      }
+
+      res.json({ ok: true });
     })
   );
 

@@ -5,6 +5,12 @@ import { statusUpdateEmail } from '../templates/statusUpdateEmail.js';
 import { submissionConfirmationEmail } from '../templates/submissionConfirmationEmail.js';
 import { assignmentEmailForAssignee, assignmentEmailForRequester } from '../templates/assignmentEmail.js';
 
+// Message-ID gốc dùng chung cho mọi email của cùng 1 yêu cầu (kèm subject giống nhau ở
+// các template), để mail client (Outlook, Apple Mail...) gom chúng vào chung 1 luồng hội thoại
+// qua header In-Reply-To/References, không chỉ dựa vào subject như Gmail.
+const MESSAGE_ID_DOMAIN = 'hotrohuph.site';
+const threadRootId = (requestId) => `<request-${requestId}@${MESSAGE_ID_DOMAIN}>`;
+
 let transporter = null;
 let warnedOnce = false;
 
@@ -35,7 +41,7 @@ function logEmail({ requestId, to, subject, status, error }) {
   ).run(requestId, to, subject, status, error || null);
 }
 
-async function dispatchEmail({ requestId, to, subject, html }) {
+async function dispatchEmail({ requestId, to, subject, html, isThreadRoot }) {
   const transport = getTransporter();
 
   if (!transport) {
@@ -43,8 +49,17 @@ async function dispatchEmail({ requestId, to, subject, html }) {
     return { sent: false, reason: 'skipped_no_config' };
   }
 
+  const rootId = threadRootId(requestId);
+  const mailOptions = { from: env.smtp.from, to, subject, html };
+  if (isThreadRoot) {
+    mailOptions.messageId = rootId;
+  } else {
+    mailOptions.inReplyTo = rootId;
+    mailOptions.references = rootId;
+  }
+
   try {
-    await transport.sendMail({ from: env.smtp.from, to, subject, html });
+    await transport.sendMail(mailOptions);
     logEmail({ requestId, to, subject, status: 'sent' });
     return { sent: true };
   } catch (err) {
@@ -69,7 +84,13 @@ export async function sendSubmissionConfirmationEmail(
     requestTypeName,
     processingTimeName,
   });
-  return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+  return dispatchEmail({
+    requestId: request.id,
+    to: request.requester_email,
+    subject,
+    html,
+    isThreadRoot: true,
+  });
 }
 
 export async function sendAssignmentEmails(request, { departmentName, requestTypeName, processingTimeName }) {

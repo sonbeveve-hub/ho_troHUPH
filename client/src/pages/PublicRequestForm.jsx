@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
@@ -95,6 +96,11 @@ export default function PublicRequestForm() {
           >
             Gửi yêu cầu khác <span aria-hidden="true">→</span>
           </button>
+          <p className="mt-4">
+            <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 hover:underline">
+              Xem tình trạng xử lý
+            </Link>
+          </p>
         </div>
       </div>
     );
@@ -109,7 +115,7 @@ export default function PublicRequestForm() {
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
             Cổng tiếp nhận hỗ trợ IT
           </h1>
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-slate-700 font-medium">
             Kênh tiếp nhận hỗ trợ kỹ thuật dành riêng cho Cán bộ và Giảng viên. Thầy/Cô vui lòng
             cung cấp thông tin bên dưới (không cần đăng nhập), Trung tâm sẽ xử lý và phản hồi trực
             tiếp qua email.
@@ -160,12 +166,7 @@ export default function PublicRequestForm() {
             </select>
           </div>
 
-          <StaffEmailField
-            name={form.requesterName}
-            departmentId={form.departmentId || null}
-            value={email.email}
-            onChange={setEmail}
-          />
+          <StaffEmailField name={form.requesterName} value={email.email} onChange={setEmail} />
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Loại yêu cầu</label>
@@ -235,6 +236,13 @@ export default function PublicRequestForm() {
             {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <span aria-hidden="true">→</span>}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-slate-700 font-medium">
+          Đã gửi yêu cầu trước đó?{' '}
+          <Link to="/tra-cuu" className="text-brand-700 font-semibold hover:underline">
+            Tra cứu tình trạng xử lý
+          </Link>
+        </p>
       </div>
     </div>
   );

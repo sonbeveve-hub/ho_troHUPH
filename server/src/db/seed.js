@@ -34,18 +34,20 @@ const defaultRequestTypes = [
 const defaultProcessingTimes = ['1', '3', '5', '7', '15'];
 
 export function seed() {
-  const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name) VALUES (?)');
+  const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name, sort_order) VALUES (?, ?)');
   const insertType = db.prepare(
-    'INSERT OR IGNORE INTO request_types (name, description) VALUES (?, ?)'
+    'INSERT OR IGNORE INTO request_types (name, description, sort_order) VALUES (?, ?, ?)'
   );
   const insertProcessingTime = db.prepare(
-    'INSERT OR IGNORE INTO processing_times (name) VALUES (?)'
+    'INSERT OR IGNORE INTO processing_times (name, sort_order) VALUES (?, ?)'
   );
 
   const seedAll = db.transaction(() => {
-    for (const name of defaultDepartments) insertDept.run(name);
-    for (const [name, description] of defaultRequestTypes) insertType.run(name, description);
-    for (const name of defaultProcessingTimes) insertProcessingTime.run(name);
+    defaultDepartments.forEach((name, index) => insertDept.run(name, index + 1));
+    defaultRequestTypes.forEach(([name, description], index) =>
+      insertType.run(name, description, index + 1)
+    );
+    defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
   });
 
   seedAll();

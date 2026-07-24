@@ -9,6 +9,7 @@ export const env = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv: process.env.NODE_ENV || 'development',
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
+  appUrl: (process.env.APP_URL || 'https://hotrohuph.site').replace(/\/+$/, ''),
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT) || 0,

@@ -79,11 +79,45 @@ function migrateAddAssigneeColumns() {
   `);
 }
 
+// Thêm sort_order cho các bảng danh mục để admin có thể tự sắp xếp thứ tự hiển thị.
+// Backfill theo đúng thứ tự đang hiển thị hiện tại (tên/số ngày) để không đổi thứ tự
+// nhìn thấy của admin ngay sau khi migrate.
+function migrateAddSortOrder() {
+  const tables = [
+    { name: 'departments', orderBy: 'name' },
+    { name: 'request_types', orderBy: 'name' },
+    { name: 'processing_times', orderBy: 'CAST(name AS INTEGER), name' },
+  ];
+
+  for (const { name: table, orderBy } of tables) {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (columns.some((c) => c.name === 'sort_order')) continue;
+
+    db.exec(`ALTER TABLE ${table} ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;`);
+
+    const rows = db.prepare(`SELECT id FROM ${table} ORDER BY ${orderBy}`).all();
+    const update = db.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`);
+    db.transaction(() => {
+      rows.forEach((row, index) => update.run(index + 1, row.id));
+    })();
+  }
+}
+
+// Thêm cột requester_confirmed_at cho tính năng trang tra cứu công khai
+// (người gửi tự xác nhận đã được hỗ trợ).
+function migrateAddRequesterConfirmedAt() {
+  const columns = db.prepare('PRAGMA table_info(requests)').all();
+  if (columns.some((c) => c.name === 'requester_confirmed_at')) return;
+  db.exec('ALTER TABLE requests ADD COLUMN requester_confirmed_at TEXT;');
+}
+
 export function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
   migratePriorityToProcessingTime();
   migrateAddAssigneeColumns();
+  migrateAddSortOrder();
+  migrateAddRequesterConfirmedAt();
   // Idempotent — bảo đảm index này luôn tồn tại dù đi qua nhánh nào ở trên.
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');
 }

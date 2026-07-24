@@ -3,8 +3,8 @@ import { useStaffLookup } from '../../hooks/useStaffLookup.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function StaffEmailField({ name, departmentId, value, onChange }) {
-  const { matches, loading } = useStaffLookup(name, departmentId);
+export default function StaffEmailField({ name, value, onChange }) {
+  const { matches, loading } = useStaffLookup(name);
   const [mode, setMode] = useState('idle'); // idle | auto | picked | manual
   const [manualEmail, setManualEmail] = useState('');
 

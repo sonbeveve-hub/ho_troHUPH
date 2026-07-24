@@ -1,4 +1,5 @@
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { requestEmailSubject, trackingLinkHtml } from './emailShared.js';
 
 const FOOTER = `
   <p>Trân trọng.<br/>TTTH - Phòng KT&amp;BĐCL.</p>
@@ -6,7 +7,7 @@ const FOOTER = `
 `;
 
 export function assignmentEmailForAssignee({ request, departmentName, requestTypeName, processingTimeName }) {
-  const subject = `[${request.request_code}] Bạn được phân công xử lý yêu cầu hỗ trợ`;
+  const subject = requestEmailSubject(request);
 
   const html = `
     <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
@@ -28,7 +29,7 @@ export function assignmentEmailForAssignee({ request, departmentName, requestTyp
 }
 
 export function assignmentEmailForRequester({ request }) {
-  const subject = `[${request.request_code}] Yêu cầu hỗ trợ của thầy/cô đã được phân công xử lý`;
+  const subject = requestEmailSubject(request);
 
   const html = `
     <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
@@ -40,6 +41,7 @@ export function assignmentEmailForRequester({ request }) {
         ${request.assignee_phone ? `<tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Điện thoại</td><td>${escapeHtml(request.assignee_phone)}</td></tr>` : ''}
       </table>
       <p>Thầy/cô có thể liên hệ trực tiếp theo thông tin trên nếu cần trao đổi thêm.</p>
+      ${trackingLinkHtml(request)}
       ${FOOTER}
     </div>
   `;

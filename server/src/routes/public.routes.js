@@ -3,7 +3,7 @@ import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
-import { submitRequestLimiter } from '../middleware/rateLimit.js';
+import { submitRequestLimiter, trackRequestLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail } from '../services/email.service.js';
 
@@ -40,7 +40,7 @@ publicRouter.get(
   '/departments',
   asyncHandler(async (req, res) => {
     const rows = db
-      .prepare('SELECT id, name FROM departments WHERE active = 1 ORDER BY name')
+      .prepare('SELECT id, name FROM departments WHERE active = 1 ORDER BY sort_order, id')
       .all();
     res.json(rows);
   })
@@ -50,7 +50,7 @@ publicRouter.get(
   '/request-types',
   asyncHandler(async (req, res) => {
     const rows = db
-      .prepare('SELECT id, name, description FROM request_types WHERE active = 1 ORDER BY name')
+      .prepare('SELECT id, name, description FROM request_types WHERE active = 1 ORDER BY sort_order, id')
       .all();
     res.json(rows);
   })
@@ -60,7 +60,7 @@ publicRouter.get(
   '/processing-times',
   asyncHandler(async (req, res) => {
     const rows = db
-      .prepare('SELECT id, name FROM processing_times WHERE active = 1 ORDER BY CAST(name AS INTEGER), name')
+      .prepare('SELECT id, name FROM processing_times WHERE active = 1 ORDER BY sort_order, id')
       .all();
     res.json(rows);
   })
@@ -69,11 +69,8 @@ publicRouter.get(
 publicRouter.get(
   '/staff/lookup',
   asyncHandler(async (req, res) => {
-    const { name, department_id: departmentId } = req.query;
-    const results = lookupStaff({
-      name: typeof name === 'string' ? name : '',
-      departmentId: departmentId ? Number(departmentId) : null,
-    });
+    const { name } = req.query;
+    const results = lookupStaff({ name: typeof name === 'string' ? name : '' });
     res.json(results);
   })
 );
@@ -194,5 +191,59 @@ publicRouter.post(
     );
 
     res.status(201).json({ id: info.lastInsertRowid, requestCode });
+  })
+);
+
+const TRACK_SELECT = `
+  SELECT requests.id, requests.request_code, requests.requester_name, requests.description,
+         requests.status, requests.assignee_name, requests.requester_confirmed_at,
+         requests.created_at, requests.updated_at,
+         departments.name AS department_name, request_types.name AS request_type_name,
+         processing_times.name AS processing_time_name
+  FROM requests
+  LEFT JOIN departments ON departments.id = requests.department_id
+  LEFT JOIN request_types ON request_types.id = requests.request_type_id
+  LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
+  WHERE requests.request_code = ?
+`;
+
+publicRouter.get(
+  '/track/:code',
+  trackRequestLimiter,
+  asyncHandler(async (req, res) => {
+    const request = db.prepare(TRACK_SELECT).get(req.params.code.trim().toUpperCase());
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+
+    const history = db
+      .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
+      .all(request.id);
+
+    res.json({ ...request, history });
+  })
+);
+
+publicRouter.post(
+  '/track/:code/confirm',
+  trackRequestLimiter,
+  asyncHandler(async (req, res) => {
+    const request = db
+      .prepare('SELECT id, requester_confirmed_at FROM requests WHERE request_code = ?')
+      .get(req.params.code.trim().toUpperCase());
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+
+    if (!request.requester_confirmed_at) {
+      db.prepare("UPDATE requests SET requester_confirmed_at = datetime('now') WHERE id = ?").run(
+        request.id
+      );
+      db.prepare(
+        "INSERT INTO request_status_history (request_id, status, note) SELECT id, status, 'Người gửi xác nhận đã được hỗ trợ' FROM requests WHERE id = ?"
+      ).run(request.id);
+    }
+
+    const updated = db.prepare(TRACK_SELECT).get(req.params.code.trim().toUpperCase());
+    const history = db
+      .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
+      .all(request.id);
+    res.json({ ...updated, history });
   })
 );

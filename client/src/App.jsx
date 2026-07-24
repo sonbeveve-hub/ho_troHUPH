@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { api } from './api/client.js';
 import PublicRequestForm from './pages/PublicRequestForm.jsx';
+import TrackRequest from './pages/TrackRequest.jsx';
 import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import Stats from './pages/admin/Stats.jsx';
@@ -29,6 +30,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<PublicRequestForm />} />
+      <Route path="/tra-cuu" element={<TrackRequest />} />
+      <Route path="/tra-cuu/:code" element={<TrackRequest />} />
 
       <Route
         path="/admin/login"

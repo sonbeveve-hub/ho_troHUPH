@@ -1,4 +1,5 @@
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { requestEmailSubject, trackingLinkHtml } from './emailShared.js';
 
 const STATUS_LABELS = {
   new: 'Mới tiếp nhận',
@@ -9,7 +10,7 @@ const STATUS_LABELS = {
 
 export function statusUpdateEmail({ request, newStatus, note }) {
   const statusLabel = STATUS_LABELS[newStatus] || newStatus;
-  const subject = `[${request.request_code}] Cập nhật tiến độ yêu cầu hỗ trợ: ${statusLabel}`;
+  const subject = requestEmailSubject(request);
 
   const html = `
     <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
@@ -19,6 +20,7 @@ export function statusUpdateEmail({ request, newStatus, note }) {
         <tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Trạng thái mới</td><td><strong>${escapeHtml(statusLabel)}</strong></td></tr>
         ${note ? `<tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Ghi chú</td><td>${escapeHtml(note)}</td></tr>` : ''}
       </table>
+      ${trackingLinkHtml(request)}
       <p>Trân trọng.<br/>TTTH - Phòng KT&amp;BĐCL.</p>
       <p style="color:#6b7280; font-size:12px;">Đây là email tự động, vui lòng không trả lời trực tiếp email này.</p>
     </div>

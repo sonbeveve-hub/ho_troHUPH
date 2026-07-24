@@ -19,13 +19,19 @@ function pickColumn(row, aliases) {
   return '';
 }
 
+function nextSortOrder(table) {
+  return db.prepare(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`).get().next;
+}
+
 function resolveDepartmentId(departmentName) {
   if (!departmentName) return null;
   const existing = db
     .prepare('SELECT id FROM departments WHERE name = ? COLLATE NOCASE')
     .get(departmentName);
   if (existing) return existing.id;
-  const info = db.prepare('INSERT INTO departments (name) VALUES (?)').run(departmentName);
+  const info = db
+    .prepare('INSERT INTO departments (name, sort_order) VALUES (?, ?)')
+    .run(departmentName, nextSortOrder('departments'));
   return info.lastInsertRowid;
 }
 
@@ -88,8 +94,8 @@ function importSimpleCategory(buffer, table, hasDescription) {
 
   const findByName = db.prepare(`SELECT id FROM ${table} WHERE name = ? COLLATE NOCASE`);
   const insert = hasDescription
-    ? db.prepare(`INSERT INTO ${table} (name, description) VALUES (?, ?)`)
-    : db.prepare(`INSERT INTO ${table} (name) VALUES (?)`);
+    ? db.prepare(`INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?)`)
+    : db.prepare(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`);
   const update = hasDescription
     ? db.prepare(`UPDATE ${table} SET description = ?, active = 1 WHERE id = ?`)
     : db.prepare(`UPDATE ${table} SET active = 1 WHERE id = ?`);
@@ -110,8 +116,9 @@ function importSimpleCategory(buffer, table, hasDescription) {
         else update.run(existing.id);
         result.updated += 1;
       } else {
-        if (hasDescription) insert.run(name, description || null);
-        else insert.run(name);
+        const sortOrder = nextSortOrder(table);
+        if (hasDescription) insert.run(name, description || null, sortOrder);
+        else insert.run(name, sortOrder);
         result.inserted += 1;
       }
     });
