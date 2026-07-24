@@ -64,10 +64,26 @@ function migratePriorityToProcessingTime() {
   if (wasForeignKeysOn) db.pragma('foreign_keys = ON');
 }
 
+// Thêm cột phân công xử lý (assignee_*) cho DB cũ chưa có — ADD COLUMN đơn giản
+// vì các cột này không nằm trong CHECK constraint nào.
+function migrateAddAssigneeColumns() {
+  const columns = db.prepare('PRAGMA table_info(requests)').all();
+  const hasAssigneeName = columns.some((c) => c.name === 'assignee_name');
+  if (hasAssigneeName) return;
+
+  db.exec(`
+    ALTER TABLE requests ADD COLUMN assignee_name TEXT;
+    ALTER TABLE requests ADD COLUMN assignee_email TEXT;
+    ALTER TABLE requests ADD COLUMN assignee_phone TEXT;
+    ALTER TABLE requests ADD COLUMN assigned_at TEXT;
+  `);
+}
+
 export function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
   migratePriorityToProcessingTime();
+  migrateAddAssigneeColumns();
   // Idempotent — bảo đảm index này luôn tồn tại dù đi qua nhánh nào ở trên.
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');
 }

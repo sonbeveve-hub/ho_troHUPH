@@ -30,7 +30,7 @@ export default function AdminLogin({ onLoggedIn }) {
       <OrganicBackdrop />
       <div className="relative z-10 max-w-sm w-full">
         <div className="flex items-center justify-center mb-6">
-          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-12 w-auto" />
+          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-16 w-auto" />
         </div>
 
         <form

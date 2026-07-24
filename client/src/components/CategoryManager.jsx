@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import ExcelImportModal from './ExcelImportModal.jsx';
 
+const PAGE_SIZE = 20;
+
 export default function CategoryManager({ title, apiBase, hasDescription, importHint }) {
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
@@ -17,6 +20,9 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
     api.get(apiBase).then(setItems);
   };
   useEffect(load, [apiBase]);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const visibleItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -107,8 +113,10 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
       </form>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
+      {items.length > 0 && <p className="text-xs text-slate-400 mb-2">{items.length} mục</p>}
+
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <div key={item.id} className="px-4 py-3">
             {editingId === item.id ? (
               <div className="space-y-2">
@@ -168,6 +176,28 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
           <p className="px-4 py-6 text-sm text-slate-400">Chưa có {title.toLowerCase()} nào.</p>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            Trước
+          </button>
+          <span className="text-sm text-slate-500">
+            Trang {page}/{totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            Sau
+          </button>
+        </div>
+      )}
 
       {showImport && (
         <ExcelImportModal

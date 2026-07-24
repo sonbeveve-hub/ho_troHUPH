@@ -4,7 +4,7 @@ import path from 'node:path';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
-import { sendStatusUpdateEmail } from '../services/email.service.js';
+import { sendStatusUpdateEmail, sendAssignmentEmails } from '../services/email.service.js';
 import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 
 export const adminRequestsRouter = Router();
@@ -183,6 +183,56 @@ adminRequestsRouter.patch(
     );
 
     res.json({ ok: true });
+  })
+);
+
+adminRequestsRouter.patch(
+  '/:id/assign',
+  asyncHandler(async (req, res) => {
+    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+
+    const { assigneeName, assigneeEmail, assigneePhone } = req.body || {};
+
+    const errors = [];
+    if (!assigneeName || String(assigneeName).trim().length < 2) {
+      errors.push('Vui lòng nhập tên người xử lý.');
+    }
+    if (!assigneeEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(assigneeEmail).trim())) {
+      errors.push('Vui lòng nhập email người xử lý hợp lệ.');
+    }
+    if (errors.length) {
+      return res.status(400).json({ error: errors.join(' ') });
+    }
+
+    const nextStatus = existing.status === 'new' ? 'in_progress' : existing.status;
+    const trimmedName = String(assigneeName).trim();
+
+    db.prepare(
+      `UPDATE requests
+       SET assignee_name = ?, assignee_email = ?, assignee_phone = ?, assigned_at = datetime('now'),
+           status = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(
+      trimmedName,
+      String(assigneeEmail).trim(),
+      assigneePhone ? String(assigneePhone).trim() : null,
+      nextStatus,
+      req.params.id
+    );
+
+    db.prepare(
+      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
+    ).run(req.params.id, nextStatus, `Đã phân công cho ${trimmedName} xử lý`);
+
+    const updated = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
+    const emailResult = await sendAssignmentEmails(updated, {
+      departmentName: updated.department_name,
+      requestTypeName: updated.request_type_name,
+      processingTimeName: updated.processing_time_name,
+    });
+
+    res.json({ ok: true, ...emailResult });
   })
 );
 

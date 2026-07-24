@@ -35,6 +35,11 @@ export default function RequestDetail() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [assignForm, setAssignForm] = useState({ assigneeName: '', assigneeEmail: '', assigneePhone: '' });
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignError, setAssignError] = useState('');
+  const [assignMessage, setAssignMessage] = useState('');
+
   const load = () => {
     api.get(`/admin/requests/${id}`).then((data) => {
       setRequest(data);
@@ -48,6 +53,15 @@ export default function RequestDetail() {
     api.get('/admin/request-types').then(setRequestTypes);
     api.get('/admin/processing-times').then(setProcessingTimes);
   }, []);
+
+  useEffect(() => {
+    if (!request) return;
+    setAssignForm({
+      assigneeName: request.assignee_name || '',
+      assigneeEmail: request.assignee_email || '',
+      assigneePhone: request.assignee_phone || '',
+    });
+  }, [request?.id]);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -88,6 +102,25 @@ export default function RequestDetail() {
       setEditError(err.message);
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    setAssignSaving(true);
+    setAssignError('');
+    setAssignMessage('');
+    try {
+      const res = await api.patch(`/admin/requests/${id}/assign`, assignForm);
+      const parts = [];
+      parts.push(res.assigneeSent ? 'đã gửi email cho người xử lý' : 'email cho người xử lý chưa gửi được');
+      parts.push(res.requesterSent ? 'đã gửi email cho người yêu cầu' : 'email cho người yêu cầu chưa gửi được');
+      setAssignMessage(`Đã phân công — ${parts.join(', ')}.`);
+      load();
+    } catch (err) {
+      setAssignError(err.message);
+    } finally {
+      setAssignSaving(false);
     }
   };
 
@@ -245,6 +278,15 @@ export default function RequestDetail() {
                 <dt className="text-slate-400">Nguồn email</dt>
                 <dd className="text-slate-800">{request.email_source}</dd>
               </div>
+              {request.assignee_name && (
+                <div className="col-span-2">
+                  <dt className="text-slate-400">Người xử lý</dt>
+                  <dd className="text-slate-800">
+                    {request.assignee_name} — {request.assignee_email}
+                    {request.assignee_phone ? ` — ${request.assignee_phone}` : ''}
+                  </dd>
+                </div>
+              )}
             </dl>
 
             <div className="mt-4">
@@ -312,6 +354,52 @@ export default function RequestDetail() {
           className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
         >
           {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
+        </button>
+      </form>
+
+      <form onSubmit={handleAssign} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
+        <h2 className="font-semibold text-slate-900">Phân công xử lý</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Họ và tên</label>
+            <input
+              value={assignForm.assigneeName}
+              onChange={(e) => setAssignForm((f) => ({ ...f, assigneeName: e.target.value }))}
+              placeholder="Người phụ trách xử lý"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <input
+              type="email"
+              value={assignForm.assigneeEmail}
+              onChange={(e) => setAssignForm((f) => ({ ...f, assigneeEmail: e.target.value }))}
+              placeholder="mail@huph.edu.vn"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Số điện thoại (tuỳ chọn)</label>
+          <input
+            value={assignForm.assigneePhone}
+            onChange={(e) => setAssignForm((f) => ({ ...f, assigneePhone: e.target.value }))}
+            className="w-full sm:w-1/2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+          />
+        </div>
+        {assignError && <p className="text-sm text-red-600">{assignError}</p>}
+        {assignMessage && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+            {assignMessage}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={assignSaving}
+          className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
+        >
+          {assignSaving ? 'Đang lưu...' : request.assignee_name ? 'Cập nhật phân công & gửi email' : 'Phân công & gửi email'}
         </button>
       </form>
 

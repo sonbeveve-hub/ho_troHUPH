@@ -105,7 +105,7 @@ export default function PublicRequestForm() {
       <OrganicBackdrop />
       <div className="relative z-10 max-w-xl mx-auto">
         <div className="mb-6 text-center">
-          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-14 w-auto mx-auto mb-4" />
+          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
             Cổng tiếp nhận hỗ trợ IT
           </h1>

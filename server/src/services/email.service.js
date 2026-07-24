@@ -3,6 +3,7 @@ import { env, isSmtpConfigured } from '../config/env.js';
 import { db } from '../db/index.js';
 import { statusUpdateEmail } from '../templates/statusUpdateEmail.js';
 import { submissionConfirmationEmail } from '../templates/submissionConfirmationEmail.js';
+import { assignmentEmailForAssignee, assignmentEmailForRequester } from '../templates/assignmentEmail.js';
 
 let transporter = null;
 let warnedOnce = false;
@@ -69,4 +70,26 @@ export async function sendSubmissionConfirmationEmail(
     processingTimeName,
   });
   return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+}
+
+export async function sendAssignmentEmails(request, { departmentName, requestTypeName, processingTimeName }) {
+  const toAssignee = assignmentEmailForAssignee({ request, departmentName, requestTypeName, processingTimeName });
+  const toRequester = assignmentEmailForRequester({ request });
+
+  const [assigneeResult, requesterResult] = await Promise.all([
+    dispatchEmail({
+      requestId: request.id,
+      to: request.assignee_email,
+      subject: toAssignee.subject,
+      html: toAssignee.html,
+    }),
+    dispatchEmail({
+      requestId: request.id,
+      to: request.requester_email,
+      subject: toRequester.subject,
+      html: toRequester.html,
+    }),
+  ]);
+
+  return { assigneeSent: assigneeResult.sent, requesterSent: requesterResult.sent };
 }

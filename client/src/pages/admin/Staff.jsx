@@ -3,9 +3,10 @@ import { api } from '../../api/client.js';
 import ExcelImportModal from '../../components/ExcelImportModal.jsx';
 
 export default function Staff() {
-  const [items, setItems] = useState([]);
+  const [result, setResult] = useState({ data: [], page: 1, pageSize: 30, total: 0 });
   const [departments, setDepartments] = useState([]);
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
   const [showImport, setShowImport] = useState(false);
   const [newStaff, setNewStaff] = useState({ name: '', email: '', departmentId: '' });
   const [error, setError] = useState('');
@@ -14,15 +15,18 @@ export default function Staff() {
   const [editStaff, setEditStaff] = useState({ name: '', email: '', departmentId: '' });
 
   const load = () => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page) });
     if (q) params.set('q', q);
-    api.get(`/admin/staff?${params.toString()}`).then((res) => setItems(res.data));
+    api.get(`/admin/staff?${params.toString()}`).then(setResult);
   };
+
+  const items = result.data;
+  const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
   useEffect(() => {
     api.get('/admin/departments').then(setDepartments);
   }, []);
-  useEffect(load, [q]);
+  useEffect(load, [q, page]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -114,10 +118,14 @@ export default function Staff() {
 
       <input
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setPage(1);
+        }}
         placeholder="Tìm theo tên..."
         className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm mb-4"
       />
+      <p className="text-xs text-slate-400 mb-2">{result.total} nhân sự</p>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((s) => (
@@ -185,6 +193,28 @@ export default function Staff() {
         ))}
         {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-400">Chưa có nhân sự nào.</p>}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            Trước
+          </button>
+          <span className="text-sm text-slate-500">
+            Trang {page}/{totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
+          >
+            Sau
+          </button>
+        </div>
+      )}
 
       {showImport && (
         <ExcelImportModal

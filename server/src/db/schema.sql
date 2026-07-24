@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS requests (
   status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','done','rejected')),
   admin_notes TEXT,
   ip_address TEXT,
+  assignee_name TEXT,
+  assignee_email TEXT,
+  assignee_phone TEXT,
+  assigned_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

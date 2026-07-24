@@ -114,6 +114,10 @@ export default function RequestsList() {
         </select>
       </div>
 
+      {!loading && !error && result.data.length > 0 && (
+        <p className="text-xs text-slate-400 mb-2">{result.total} yêu cầu</p>
+      )}
+
       {loading ? (
         <p className="text-slate-400 text-sm">Đang tải...</p>
       ) : error ? (
