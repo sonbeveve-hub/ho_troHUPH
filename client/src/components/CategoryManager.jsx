@@ -78,7 +78,7 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
         <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
         <button
           onClick={() => setShowImport(true)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
         >
           Import Excel
         </button>
@@ -90,9 +90,9 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={`Tên ${title.toLowerCase()} mới`}
-            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
           />
-          <button className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
+          <button className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30">
             Thêm
           </button>
         </div>
@@ -101,13 +101,13 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Mô tả (tuỳ chọn)"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
           />
         )}
       </form>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-      <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-100">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((item) => (
           <div key={item.id} className="px-4 py-3">
             {editingId === item.id ? (
@@ -115,7 +115,7 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                   autoFocus
                 />
                 {hasDescription && (
@@ -123,19 +123,19 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder="Mô tả (tuỳ chọn)"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                    className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                   />
                 )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => saveEdit(item.id)}
-                    className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600"
+                    className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30"
                   >
                     Lưu
                   </button>
                   <button
                     onClick={cancelEdit}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
                   >
                     Huỷ
                   </button>

@@ -74,7 +74,7 @@ export default function ExcelImportModal({ title, importPath, hint, onClose, onD
           <button
             onClick={handleImport}
             disabled={loading}
-            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-60"
+            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
           >
             {loading ? 'Đang import...' : 'Import'}
           </button>

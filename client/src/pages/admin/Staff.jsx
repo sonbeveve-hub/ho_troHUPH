@@ -75,7 +75,7 @@ export default function Staff() {
         <h1 className="text-2xl font-bold text-slate-900">Danh sách nhân sự</h1>
         <button
           onClick={() => setShowImport(true)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
         >
           Import Excel
         </button>
@@ -86,18 +86,18 @@ export default function Staff() {
           value={newStaff.name}
           onChange={(e) => setNewStaff((s) => ({ ...s, name: e.target.value }))}
           placeholder="Họ tên"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         />
         <input
           value={newStaff.email}
           onChange={(e) => setNewStaff((s) => ({ ...s, email: e.target.value }))}
           placeholder="Email"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         />
         <select
           value={newStaff.departmentId}
           onChange={(e) => setNewStaff((s) => ({ ...s, departmentId: e.target.value }))}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         >
           <option value="">-- Đơn vị --</option>
           {departments.map((d) => (
@@ -106,7 +106,7 @@ export default function Staff() {
             </option>
           ))}
         </select>
-        <button className="col-span-3 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
+        <button className="col-span-3 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30">
           Thêm nhân sự
         </button>
       </form>
@@ -116,10 +116,10 @@ export default function Staff() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Tìm theo tên..."
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm mb-4"
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm mb-4"
       />
 
-      <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-100">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((s) => (
           <div key={s.id} className="px-4 py-3">
             {editingId === s.id ? (
@@ -127,19 +127,19 @@ export default function Staff() {
                 <input
                   value={editStaff.name}
                   onChange={(e) => setEditStaff((f) => ({ ...f, name: e.target.value }))}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                  className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                   autoFocus
                 />
                 <input
                   value={editStaff.email}
                   onChange={(e) => setEditStaff((f) => ({ ...f, email: e.target.value }))}
                   placeholder="Email"
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                  className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                 />
                 <select
                   value={editStaff.departmentId}
                   onChange={(e) => setEditStaff((f) => ({ ...f, departmentId: e.target.value }))}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                  className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                 >
                   <option value="">-- Đơn vị --</option>
                   {departments.map((d) => (
@@ -151,13 +151,13 @@ export default function Staff() {
                 <div className="col-span-3 flex gap-2">
                   <button
                     onClick={() => saveEdit(s.id)}
-                    className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600"
+                    className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-3 py-1.5 text-xs font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30"
                   >
                     Lưu
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
                   >
                     Huỷ
                   </button>

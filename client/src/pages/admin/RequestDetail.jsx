@@ -110,7 +110,7 @@ export default function RequestDetail() {
         ← Quay lại danh sách
       </button>
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-6 mb-5">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         {editing ? (
           <form onSubmit={saveEdit} className="space-y-3">
             <div>
@@ -118,7 +118,7 @@ export default function RequestDetail() {
               <input
                 value={editForm.requesterName}
                 onChange={(e) => setEditForm((f) => ({ ...f, requesterName: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -127,7 +127,7 @@ export default function RequestDetail() {
                 <select
                   value={editForm.departmentId}
                   onChange={(e) => setEditForm((f) => ({ ...f, departmentId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
                 >
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -141,7 +141,7 @@ export default function RequestDetail() {
                 <select
                   value={editForm.requestTypeId}
                   onChange={(e) => setEditForm((f) => ({ ...f, requestTypeId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
                 >
                   {requestTypes.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -157,7 +157,7 @@ export default function RequestDetail() {
                 <select
                   value={editForm.processingTimeId}
                   onChange={(e) => setEditForm((f) => ({ ...f, processingTimeId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
                 >
                   {processingTimes.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -172,7 +172,7 @@ export default function RequestDetail() {
                   type="email"
                   value={editForm.requesterEmail}
                   onChange={(e) => setEditForm((f) => ({ ...f, requesterEmail: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
                 />
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function RequestDetail() {
                 value={editForm.description}
                 onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                 rows={3}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
               />
             </div>
             {editError && <p className="text-sm text-red-600">{editError}</p>}
@@ -190,14 +190,14 @@ export default function RequestDetail() {
               <button
                 type="submit"
                 disabled={savingEdit}
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-60"
+                className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
               >
                 {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
               >
                 Huỷ
               </button>
@@ -279,13 +279,13 @@ export default function RequestDetail() {
         )}
       </div>
 
-      <form onSubmit={handleUpdate} className="bg-white rounded-2xl border border-slate-100 p-6 mb-5 space-y-3">
+      <form onSubmit={handleUpdate} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
         <h2 className="font-semibold text-slate-900">Cập nhật tiến độ</h2>
         <div className="flex gap-2">
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>
@@ -299,7 +299,7 @@ export default function RequestDetail() {
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           placeholder="Ghi chú gửi kèm cho người yêu cầu (tuỳ chọn)..."
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         />
         {message && (
           <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
@@ -309,13 +309,13 @@ export default function RequestDetail() {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-60"
+          className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
         >
           {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
         </button>
       </form>
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-6 mb-5">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         <h2 className="font-semibold text-slate-900 mb-3">Lịch sử trạng thái</h2>
         <ul className="space-y-2">
           {request.history.map((h) => (
@@ -331,7 +331,7 @@ export default function RequestDetail() {
         </ul>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-6">
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6">
         <h2 className="font-semibold text-slate-900 mb-3">Nhật ký email</h2>
         {request.emailLog.length === 0 ? (
           <p className="text-sm text-slate-400">Chưa có email nào được gửi.</p>

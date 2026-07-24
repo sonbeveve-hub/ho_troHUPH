@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
+import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 
 const EMPTY_FORM = {
   requesterName: '',
@@ -72,9 +73,10 @@ export default function PublicRequestForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#C7EDDD] px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <OrganicBackdrop />
+        <div className="relative z-10 max-w-md w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-8 text-center">
+          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
             ✓
           </div>
           <h1 className="text-xl font-semibold text-slate-900">Đã gửi yêu cầu thành công</h1>
@@ -89,9 +91,9 @@ export default function PublicRequestForm() {
               setEmail({ email: '', source: 'manual' });
               setImages([]);
             }}
-            className="mt-6 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-white font-medium hover:bg-brand-600 transition"
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
           >
-            Gửi yêu cầu khác
+            Gửi yêu cầu khác <span aria-hidden="true">→</span>
           </button>
         </div>
       </div>
@@ -99,8 +101,9 @@ export default function PublicRequestForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#C7EDDD] px-4 py-10">
-      <div className="max-w-xl mx-auto">
+    <div className="min-h-screen px-4 py-10">
+      <OrganicBackdrop />
+      <div className="relative z-10 max-w-xl mx-auto">
         <div className="mb-6 text-center">
           <img src="/logo.svg" alt="Trung tâm Tin học" className="h-14 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-slate-900">Gửi yêu cầu hỗ trợ</h1>
@@ -111,7 +114,7 @@ export default function PublicRequestForm() {
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8 space-y-5"
+          className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 space-y-5"
         >
           {/* honeypot — ẩn với người dùng thật */}
           <input
@@ -131,7 +134,7 @@ export default function PublicRequestForm() {
               value={form.requesterName}
               onChange={update('requesterName')}
               placeholder="Nguyễn Văn A"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
 
@@ -142,7 +145,7 @@ export default function PublicRequestForm() {
             <select
               value={form.departmentId}
               onChange={update('departmentId')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
             >
               <option value="">-- Chọn đơn vị --</option>
               {departments.map((d) => (
@@ -165,7 +168,7 @@ export default function PublicRequestForm() {
             <select
               value={form.requestTypeId}
               onChange={update('requestTypeId')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
             >
               <option value="">-- Chọn loại yêu cầu --</option>
               {requestTypes.map((t) => (
@@ -186,10 +189,10 @@ export default function PublicRequestForm() {
                   key={p.id}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, processingTimeId: String(p.id) }))}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                     form.processingTimeId === String(p.id)
-                      ? 'border-brand-500 bg-brand-50 text-brand-700'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                      ? 'border-transparent bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/30'
+                      : 'border-slate-200 bg-white/70 text-slate-600 hover:bg-white'
                   }`}
                 >
                   {p.name} ngày
@@ -208,14 +211,14 @@ export default function PublicRequestForm() {
               onChange={update('description')}
               rows={4}
               placeholder="Mô tả chi tiết vấn đề hoặc yêu cầu của bạn..."
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
 
           <ImagePicker files={images} onChange={setImages} />
 
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">
+            <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">
               {error}
             </div>
           )}
@@ -223,9 +226,9 @@ export default function PublicRequestForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-brand-500 px-4 py-2.5 text-white font-semibold hover:bg-brand-600 transition disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
           >
-            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
+            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <span aria-hidden="true">→</span>}
           </button>
         </form>
       </div>

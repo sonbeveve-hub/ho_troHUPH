@@ -78,7 +78,7 @@ export default function ImagePicker({ files, onChange }) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 w-full"
+        className="rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80 w-full"
       >
         + Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
       </button>

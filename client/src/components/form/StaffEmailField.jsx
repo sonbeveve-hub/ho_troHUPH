@@ -39,7 +39,7 @@ export default function StaffEmailField({ name, departmentId, value, onChange })
           type="email"
           readOnly
           value={value}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-slate-700"
         />
         <p className="mt-1 text-xs text-slate-500">
           Tự động điền theo hồ sơ "{match?.name}"
@@ -61,7 +61,7 @@ export default function StaffEmailField({ name, departmentId, value, onChange })
         <select
           value={value}
           onChange={(e) => onChange({ email: e.target.value, source: 'picked' })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
         >
           <option value="">-- Có {matches.length} người trùng tên, vui lòng chọn --</option>
           {matches.map((m) => (
@@ -93,7 +93,7 @@ export default function StaffEmailField({ name, departmentId, value, onChange })
           setManualEmail(e.target.value);
           onChange({ email: e.target.value, source: 'manual' });
         }}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
       />
       {loading && <p className="mt-1 text-xs text-slate-400">Đang tìm kiếm...</p>}
       {showValidation && <p className="mt-1 text-xs text-red-500">Email không đúng định dạng.</p>}

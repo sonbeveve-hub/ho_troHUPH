@@ -80,7 +80,7 @@ export default function RequestsList() {
             setPage(1);
           }}
           placeholder="Tìm theo tên, mã yêu cầu, email..."
-          className="flex-1 min-w-[220px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="flex-1 min-w-[220px] rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
         />
         <select
           value={departmentId}
@@ -88,7 +88,7 @@ export default function RequestsList() {
             setDepartmentId(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         >
           <option value="">Tất cả đơn vị</option>
           {departments.map((d) => (
@@ -103,7 +103,7 @@ export default function RequestsList() {
             setRequestTypeId(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         >
           <option value="">Tất cả loại yêu cầu</option>
           {requestTypes.map((t) => (
@@ -117,11 +117,11 @@ export default function RequestsList() {
       {loading ? (
         <p className="text-slate-400 text-sm">Đang tải...</p>
       ) : error ? (
-        <div className="bg-white rounded-2xl border border-red-100 p-10 text-center text-red-600">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-red-900/5 border border-red-100/60 p-10 text-center text-red-600">
           Không tải được danh sách: {error}
         </div>
       ) : result.data.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-10 text-center text-slate-400">
           Không có yêu cầu nào phù hợp.
         </div>
       ) : (
@@ -130,7 +130,7 @@ export default function RequestsList() {
             <Link
               key={r.id}
               to={`/admin/requests/${r.id}`}
-              className="block bg-white rounded-xl border border-slate-100 p-4 hover:shadow-md transition"
+              className="block bg-white/80 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm p-4 hover:shadow-md transition"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -164,7 +164,7 @@ export default function RequestsList() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40"
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
           >
             Trước
           </button>
@@ -174,7 +174,7 @@ export default function RequestsList() {
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40"
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm disabled:opacity-40"
           >
             Sau
           </button>
