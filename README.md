@@ -72,14 +72,22 @@ pm2 save
 ```
 
 `pm2 start`/`pm2 save` giữ tiến trình chạy, nhưng **không tự khởi động lại sau khi
-Windows reboot** trừ khi bạn cài thêm 1 trong 2 cách sau:
+Windows reboot** trừ khi bạn cài thêm 1 trong các cách sau:
 
-- **Cách 1 (khuyên dùng): [nssm](https://nssm.cc/)** — chạy app như một Windows Service thật:
+- **Cách 1: [nssm](https://nssm.cc/)** — chạy app như một Windows Service thật (cần quyền admin):
   ```bash
   nssm install HoTroApp "C:\Program Files\nodejs\node.exe" "D:\Ho_Tro\server\src\index.js"
   ```
-- **Cách 2: Task Scheduler** — tạo task chạy `npm start` (trong thư mục `D:\Ho_Tro`)
-  khi đăng nhập Windows, không cần cài thêm phần mềm.
+- **Cách 2: Task Scheduler** — tạo task chạy `npm start` khi đăng nhập Windows
+  (cần quyền tạo scheduled task; một số máy do IT quản lý sẽ chặn quyền này).
+- **Cách 3 (dùng khi Task Scheduler bị chặn, không cần quyền admin): thư mục Startup** —
+  đặt shortcut vào `shell:startup` (Win+R → gõ `shell:startup`) trỏ tới
+  `scripts/start-server-hidden.vbs` và `scripts/start-tunnel-hidden.vbs` (đã có sẵn
+  trong repo). Hai file `.vbs` này chạy `scripts/start-server.bat` /
+  `scripts/start-tunnel.bat` ở chế độ ẩn (không hiện cửa sổ console), log ghi vào
+  `server/data/server-run.log` và `server/data/tunnel-run.log`. Cách này chỉ khởi
+  động khi có người đăng nhập Windows (không chạy được nếu máy khởi động lại mà
+  không ai đăng nhập).
 
 ### Lộ ra internet bằng Cloudflare Tunnel
 
