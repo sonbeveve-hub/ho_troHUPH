@@ -1,11 +1,26 @@
 import { db } from './index.js';
 
 const defaultDepartments = [
-  'Phòng Hành chính',
-  'Phòng Kế toán',
-  'Phòng Nhân sự',
-  'Phòng Công nghệ thông tin',
-  'Phòng Đào tạo',
+  // Đơn vị chức năng
+  'Phòng Quản lý đào tạo',
+  'Phòng Quản lý Học viên và sinh viên',
+  'Phòng Quản lý Khoa học và Hợp tác Phát triển',
+  'Phòng Tài chính - Kế toán',
+  'Phòng Tổ chức - Hành chính',
+  'Phòng Quản trị - Dịch vụ',
+  'Phòng Khảo thí và Bảo đảm chất lượng',
+  // Khoa, viện
+  'Viện Đào tạo bồi dưỡng cán bộ quản lý ngành y tế',
+  'Khoa các Khoa học cơ bản',
+  'Khoa Khoa học xã hội và Hành vi',
+  'Khoa Sức khỏe môi trường và Nghề nghiệp',
+  'Khoa Y học cơ sở',
+  'Khoa Y học lâm sàng',
+  // Trung tâm
+  'Trung tâm xét nghiệm',
+  'Trung tâm nghiên cứu chính sách PCCT (CIPPR)',
+  'Trung tâm nghiên cứu YTCC và HST (CENPHER)',
+  'Trung tâm nghiên cứu khoa học sức khỏe (CPHS)',
 ];
 
 const defaultRequestTypes = [
