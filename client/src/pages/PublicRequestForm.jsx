@@ -106,9 +106,13 @@ export default function PublicRequestForm() {
       <div className="relative z-10 max-w-xl mx-auto">
         <div className="mb-6 text-center">
           <img src="/logo.svg" alt="Trung tâm Tin học" className="h-14 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900">Gửi yêu cầu hỗ trợ</h1>
-          <p className="mt-1 text-slate-500">
-            Điền thông tin bên dưới, không cần đăng nhập. Chúng tôi sẽ liên hệ qua email.
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+            Cổng tiếp nhận hỗ trợ IT
+          </h1>
+          <p className="mt-2 text-slate-500">
+            Kênh tiếp nhận hỗ trợ kỹ thuật dành riêng cho Cán bộ và Giảng viên. Thầy/Cô vui lòng
+            cung cấp thông tin bên dưới (không cần đăng nhập), Trung tâm sẽ xử lý và phản hồi trực
+            tiếp qua email.
           </p>
         </div>
 
