@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import fs from 'node:fs';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { sendStatusUpdateEmail } from '../services/email.service.js';
+import { getAttachmentFilePath } from '../services/attachments.service.js';
 
 export const adminRequestsRouter = Router();
 adminRequestsRouter.use(requireAdmin);
@@ -44,7 +46,8 @@ adminRequestsRouter.get(
 
     const rows = db
       .prepare(
-        `SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name
+        `SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name,
+                (SELECT COUNT(*) FROM request_attachments WHERE request_attachments.request_id = requests.id) AS attachment_count
          FROM requests
          LEFT JOIN departments ON departments.id = requests.department_id
          LEFT JOIN request_types ON request_types.id = requests.request_type_id
@@ -81,7 +84,31 @@ adminRequestsRouter.get(
       .prepare('SELECT * FROM email_log WHERE request_id = ? ORDER BY created_at ASC')
       .all(req.params.id);
 
-    res.json({ ...request, history, emailLog });
+    const attachments = db
+      .prepare('SELECT id, original_name, mime_type, size_bytes, created_at FROM request_attachments WHERE request_id = ? ORDER BY created_at ASC')
+      .all(req.params.id);
+
+    res.json({ ...request, history, emailLog, attachments });
+  })
+);
+
+adminRequestsRouter.get(
+  '/:id/attachments/:attachmentId',
+  asyncHandler(async (req, res) => {
+    const attachment = db
+      .prepare('SELECT * FROM request_attachments WHERE id = ? AND request_id = ?')
+      .get(req.params.attachmentId, req.params.id);
+
+    if (!attachment) return res.status(404).json({ error: 'Không tìm thấy tệp đính kèm.' });
+
+    const filePath = getAttachmentFilePath(req.params.id, attachment.stored_name);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Tệp không còn tồn tại trên máy chủ.' });
+    }
+
+    res.setHeader('Content-Type', attachment.mime_type);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
   })
 );
 

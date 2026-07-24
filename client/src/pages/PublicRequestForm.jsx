@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
+import ImagePicker from '../components/form/ImagePicker.jsx';
 
 const PRIORITIES = [
   { value: 'gap', label: 'Gấp' },
@@ -21,6 +22,7 @@ export default function PublicRequestForm() {
     website: '', // honeypot
   });
   const [email, setEmail] = useState({ email: '', source: 'manual' });
+  const [images, setImages] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -49,16 +51,18 @@ export default function PublicRequestForm() {
 
     setSubmitting(true);
     try {
-      const result = await api.post('/requests', {
-        requesterName: form.requesterName.trim(),
-        departmentId: Number(form.departmentId),
-        requestTypeId: Number(form.requestTypeId),
-        priority: form.priority,
-        description: form.description.trim(),
-        requesterEmail: email.email,
-        emailSource: email.source,
-        website: form.website,
-      });
+      const body = new FormData();
+      body.append('requesterName', form.requesterName.trim());
+      body.append('departmentId', form.departmentId);
+      body.append('requestTypeId', form.requestTypeId);
+      body.append('priority', form.priority);
+      body.append('description', form.description.trim());
+      body.append('requesterEmail', email.email);
+      body.append('emailSource', email.source);
+      body.append('website', form.website);
+      images.forEach((file) => body.append('images', file));
+
+      const result = await api.post('/requests', body);
       setSuccess(result.requestCode);
     } catch (err) {
       setError(err.message);
@@ -91,6 +95,7 @@ export default function PublicRequestForm() {
                 website: '',
               });
               setEmail({ email: '', source: 'manual' });
+              setImages([]);
             }}
             className="mt-6 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-white font-medium hover:bg-brand-600 transition"
           >
@@ -210,6 +215,8 @@ export default function PublicRequestForm() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
+
+          <ImagePicker files={images} onChange={setImages} />
 
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">

@@ -93,6 +93,30 @@ export default function RequestDetail() {
           <dt className="text-slate-400 text-sm">Mô tả</dt>
           <dd className="text-slate-800 mt-1 whitespace-pre-wrap">{request.description}</dd>
         </div>
+
+        {request.attachments?.length > 0 && (
+          <div className="mt-4">
+            <dt className="text-slate-400 text-sm mb-2">Ảnh đính kèm ({request.attachments.length})</dt>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {request.attachments.map((a) => (
+                <a
+                  key={a.id}
+                  href={`/api/admin/requests/${request.id}/attachments/${a.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block aspect-square"
+                  title={a.original_name}
+                >
+                  <img
+                    src={`/api/admin/requests/${request.id}/attachments/${a.id}`}
+                    alt={a.original_name}
+                    className="w-full h-full object-cover rounded-lg border border-slate-200 hover:opacity-80 transition"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleUpdate} className="bg-white rounded-2xl border border-slate-100 p-6 mb-5 space-y-3">

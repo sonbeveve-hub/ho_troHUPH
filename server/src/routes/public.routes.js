@@ -1,10 +1,39 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
 import { submitRequestLimiter } from '../middleware/rateLimit.js';
+import { saveRequestAttachments } from '../services/attachments.service.js';
 
 export const publicRouter = Router();
+
+const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const MAX_ATTACHMENT_COUNT = 10;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_TOTAL_ATTACHMENT_BYTES, files: MAX_ATTACHMENT_COUNT },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Chỉ chấp nhận file ảnh.'));
+    }
+    cb(null, true);
+  },
+});
+
+function uploadImages(req, res, next) {
+  upload.array('images', MAX_ATTACHMENT_COUNT)(req, res, (err) => {
+    if (!err) return next();
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Mỗi ảnh không được vượt quá 20MB.' });
+    }
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: `Chỉ được đính kèm tối đa ${MAX_ATTACHMENT_COUNT} ảnh.` });
+    }
+    return res.status(400).json({ error: err.message || 'Tải ảnh lên thất bại.' });
+  });
+}
 
 publicRouter.get(
   '/departments',
@@ -45,6 +74,7 @@ const EMAIL_SOURCES = new Set(['auto', 'picked', 'manual']);
 publicRouter.post(
   '/requests',
   submitRequestLimiter,
+  uploadImages,
   asyncHandler(async (req, res) => {
     const {
       requesterName,
@@ -56,10 +86,18 @@ publicRouter.post(
       emailSource,
       website, // honeypot — trường ẩn, con người sẽ không điền
     } = req.body || {};
+    const files = req.files || [];
 
     if (website) {
       // Bot điền vào honeypot: âm thầm báo thành công, không lưu gì cả
       return res.status(201).json({ ok: true });
+    }
+
+    const totalAttachmentBytes = files.reduce((sum, f) => sum + f.size, 0);
+    if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+      return res
+        .status(400)
+        .json({ error: 'Tổng dung lượng ảnh đính kèm không được vượt quá 20MB.' });
     }
 
     const errors = [];
@@ -124,6 +162,8 @@ publicRouter.post(
     db.prepare(
       "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'new', 'Yêu cầu được tạo')"
     ).run(info.lastInsertRowid);
+
+    saveRequestAttachments(info.lastInsertRowid, files);
 
     res.status(201).json({ id: info.lastInsertRowid, requestCode });
   })

@@ -22,6 +22,7 @@ export default function RequestsList() {
   const [requestTypes, setRequestTypes] = useState([]);
   const [result, setResult] = useState({ data: [], total: 0, pageSize: 20 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => {});
@@ -30,6 +31,7 @@ export default function RequestsList() {
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     const params = new URLSearchParams({ page: String(page) });
     if (status) params.set('status', status);
     if (departmentId) params.set('department_id', departmentId);
@@ -39,6 +41,7 @@ export default function RequestsList() {
     api
       .get(`/admin/requests?${params.toString()}`)
       .then(setResult)
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [status, departmentId, requestTypeId, q, page]);
 
@@ -113,6 +116,10 @@ export default function RequestsList() {
 
       {loading ? (
         <p className="text-slate-400 text-sm">Đang tải...</p>
+      ) : error ? (
+        <div className="bg-white rounded-2xl border border-red-100 p-10 text-center text-red-600">
+          Không tải được danh sách: {error}
+        </div>
       ) : result.data.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-400">
           Không có yêu cầu nào phù hợp.
@@ -141,6 +148,11 @@ export default function RequestsList() {
                 <PriorityBadge priority={r.priority} />
                 <span className="font-mono">{r.request_code}</span>
                 <span>· {r.department_name}</span>
+                {r.attachment_count > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    📎 {r.attachment_count}
+                  </span>
+                )}
               </div>
             </Link>
           ))}

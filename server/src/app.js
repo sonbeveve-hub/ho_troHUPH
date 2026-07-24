@@ -20,6 +20,11 @@ const SqliteStore = SqliteStoreFactory(session);
 export function createApp() {
   const app = express();
 
+  // Cần thiết vì app luôn chạy sau một reverse proxy (Cloudflare Tunnel/cloudflared) —
+  // nếu không, Express không nhận diện được request đến qua HTTPS (X-Forwarded-Proto),
+  // khiến cookie session "secure" không bao giờ được set và express-rate-limit cảnh báo sai IP.
+  app.set('trust proxy', 1);
+
   app.use(express.json());
   app.use(
     cors({

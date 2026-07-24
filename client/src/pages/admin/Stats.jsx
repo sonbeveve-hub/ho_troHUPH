@@ -20,12 +20,16 @@ const STATUS_DOT = {
 export default function Stats() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/admin/stats/summary').then(setSummary);
-    api.get('/admin/stats/timeseries?days=30').then(setTimeseries);
+    api.get('/admin/stats/summary').then(setSummary).catch((err) => setError(err.message));
+    api.get('/admin/stats/timeseries?days=30').then(setTimeseries).catch(() => {});
   }, []);
 
+  if (error) {
+    return <p className="text-sm text-red-600">Không tải được thống kê: {error}</p>;
+  }
   if (!summary) return <p className="text-slate-400 text-sm">Đang tải...</p>;
 
   const statusCounts = Object.fromEntries(summary.byStatus.map((s) => [s.status, s.count]));

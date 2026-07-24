@@ -62,6 +62,17 @@ CREATE TABLE IF NOT EXISTS request_status_history (
 );
 CREATE INDEX IF NOT EXISTS idx_status_history_request ON request_status_history(request_id);
 
+CREATE TABLE IF NOT EXISTS request_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id INTEGER NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+  stored_name TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_attachments_request ON request_attachments(request_id);
+
 CREATE TABLE IF NOT EXISTS email_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   request_id INTEGER REFERENCES requests(id) ON DELETE CASCADE,
