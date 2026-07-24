@@ -13,12 +13,13 @@ export function statusUpdateEmail({ request, newStatus, note }) {
 
   const html = `
     <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Xin chào <strong>${escapeHtml(request.requester_name)}</strong>,</p>
+      <p>Kính gửi thầy/cô <strong>${escapeHtml(request.requester_name)}</strong>,</p>
       <p>Yêu cầu hỗ trợ <strong>${escapeHtml(request.request_code)}</strong> của thầy/cô vừa được cập nhật:</p>
       <table style="border-collapse: collapse; margin: 12px 0;">
         <tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Trạng thái mới</td><td><strong>${escapeHtml(statusLabel)}</strong></td></tr>
         ${note ? `<tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Ghi chú</td><td>${escapeHtml(note)}</td></tr>` : ''}
       </table>
+      <p>Trân trọng.<br/>TTTH - Phòng KT&amp;BĐCL.</p>
       <p style="color:#6b7280; font-size:12px;">Đây là email tự động, vui lòng không trả lời trực tiếp email này.</p>
     </div>
   `;
