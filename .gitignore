@@ -1,9 +1,12 @@
 node_modules/
 .env
 cloudflared/config.yml
+cloudflared/*.exe
 .claude/settings.local.json
 server/data/*.db
 server/data/*.db-journal
+server/data/*.db-shm
+server/data/*.db-wal
 server/data/sessions.sqlite
 client/dist/
 server/dist/
