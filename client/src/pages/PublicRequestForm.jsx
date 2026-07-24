@@ -72,7 +72,7 @@ export default function PublicRequestForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5FA] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#C7EDDD] px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
             ✓
@@ -99,7 +99,7 @@ export default function PublicRequestForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5FA] px-4 py-10">
+    <div className="min-h-screen bg-[#C7EDDD] px-4 py-10">
       <div className="max-w-xl mx-auto">
         <div className="mb-6 text-center">
           <img src="/logo.svg" alt="Trung tâm Tin học" className="h-14 w-auto mx-auto mb-4" />

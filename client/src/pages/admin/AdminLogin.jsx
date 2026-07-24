@@ -25,7 +25,7 @@ export default function AdminLogin({ onLoggedIn }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5FA] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#C7EDDD] flex items-center justify-center px-4">
       <div className="max-w-sm w-full">
         <div className="flex items-center justify-center mb-6">
           <img src="/logo.svg" alt="Trung tâm Tin học" className="h-12 w-auto" />

@@ -20,7 +20,7 @@ export default function AdminLayout({ admin, onLoggedOut }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5FA] flex">
+    <div className="min-h-screen bg-[#C7EDDD] flex">
       <aside className="w-60 shrink-0 bg-white border-r border-slate-100 flex flex-col py-6 px-4">
         <div className="flex items-center px-2 mb-8">
           <img src="/logo.svg" alt="Trung tâm Tin học" className="h-9 w-auto" />
