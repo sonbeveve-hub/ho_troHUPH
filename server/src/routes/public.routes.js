@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
 import { submitRequestLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
+import { sendSubmissionConfirmationEmail } from '../services/email.service.js';
 
 export const publicRouter = Router();
 
@@ -123,11 +124,13 @@ publicRouter.post(
       errors.push('Thiếu thông tin nguồn email.');
     }
 
-    const dept = db.prepare('SELECT id FROM departments WHERE id = ? AND active = 1').get(departmentId);
+    const dept = db
+      .prepare('SELECT id, name FROM departments WHERE id = ? AND active = 1')
+      .get(departmentId);
     if (!dept) errors.push('Khoa/phòng/đơn vị không hợp lệ.');
 
     const type = db
-      .prepare('SELECT id FROM request_types WHERE id = ? AND active = 1')
+      .prepare('SELECT id, name FROM request_types WHERE id = ? AND active = 1')
       .get(requestTypeId);
     if (!type) errors.push('Loại yêu cầu không hợp lệ.');
 
@@ -164,6 +167,18 @@ publicRouter.post(
     ).run(info.lastInsertRowid);
 
     saveRequestAttachments(info.lastInsertRowid, files);
+
+    await sendSubmissionConfirmationEmail(
+      {
+        id: info.lastInsertRowid,
+        request_code: requestCode,
+        requester_name: String(requesterName).trim(),
+        requester_email: String(requesterEmail).trim(),
+        priority,
+        description: String(description).trim(),
+      },
+      { departmentName: dept.name, requestTypeName: type.name }
+    );
 
     res.status(201).json({ id: info.lastInsertRowid, requestCode });
   })

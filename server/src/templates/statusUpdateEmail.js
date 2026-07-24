@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 const STATUS_LABELS = {
   new: 'Mới tiếp nhận',
   in_progress: 'Đang xử lý',
@@ -22,12 +24,4 @@ export function statusUpdateEmail({ request, newStatus, note }) {
   `;
 
   return { subject, html };
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
