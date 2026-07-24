@@ -1,0 +1,58 @@
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { api } from './api/client.js';
+import PublicRequestForm from './pages/PublicRequestForm.jsx';
+import AdminLogin from './pages/admin/AdminLogin.jsx';
+import AdminLayout from './pages/admin/AdminLayout.jsx';
+import Stats from './pages/admin/Stats.jsx';
+import RequestsList from './pages/admin/RequestsList.jsx';
+import RequestDetail from './pages/admin/RequestDetail.jsx';
+import Departments from './pages/admin/Departments.jsx';
+import RequestTypes from './pages/admin/RequestTypes.jsx';
+import Staff from './pages/admin/Staff.jsx';
+
+export default function App() {
+  const [admin, setAdmin] = useState(undefined); // undefined = đang kiểm tra, null = chưa đăng nhập
+
+  useEffect(() => {
+    api
+      .get('/admin/me')
+      .then(setAdmin)
+      .catch(() => setAdmin(null));
+  }, []);
+
+  if (admin === undefined) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-400">Đang tải...</div>;
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<PublicRequestForm />} />
+
+      <Route
+        path="/admin/login"
+        element={admin ? <Navigate to="/admin" replace /> : <AdminLogin onLoggedIn={setAdmin} />}
+      />
+
+      <Route
+        path="/admin"
+        element={
+          admin ? (
+            <AdminLayout admin={admin} onLoggedOut={() => setAdmin(null)} />
+          ) : (
+            <Navigate to="/admin/login" replace />
+          )
+        }
+      >
+        <Route index element={<Stats />} />
+        <Route path="requests" element={<RequestsList />} />
+        <Route path="requests/:id" element={<RequestDetail />} />
+        <Route path="departments" element={<Departments />} />
+        <Route path="request-types" element={<RequestTypes />} />
+        <Route path="staff" element={<Staff />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

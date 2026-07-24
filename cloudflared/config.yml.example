@@ -1,0 +1,9 @@
+# Copy thành config.yml sau khi chạy `cloudflared tunnel login` và
+# `cloudflared tunnel create ho-tro-app` (xem hướng dẫn trong README.md)
+tunnel: <TUNNEL_ID_ĐƯỢC_TẠO_RA>
+credentials-file: C:\Users\<user>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: support.tenmien-cua-ban.com
+    service: http://localhost:4000
+  - service: http_status:404
