@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
-import { getSummary, getTimeseries } from '../services/stats.service.js';
+import { getSummary, getTimeseries, getByAssignee } from '../services/stats.service.js';
 
 export const adminStatsRouter = Router();
 adminStatsRouter.use(requireAdmin);
@@ -10,6 +10,13 @@ adminStatsRouter.get(
   '/summary',
   asyncHandler(async (req, res) => {
     res.json(getSummary());
+  })
+);
+
+adminStatsRouter.get(
+  '/by-assignee',
+  asyncHandler(async (req, res) => {
+    res.json(getByAssignee());
   })
 );
 

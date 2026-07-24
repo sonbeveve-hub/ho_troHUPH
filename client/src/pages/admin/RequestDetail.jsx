@@ -28,6 +28,7 @@ export default function RequestDetail() {
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
   const [processingTimes, setProcessingTimes] = useState([]);
+  const [assignees, setAssignees] = useState([]);
 
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -52,6 +53,7 @@ export default function RequestDetail() {
     api.get('/admin/departments').then(setDepartments);
     api.get('/admin/request-types').then(setRequestTypes);
     api.get('/admin/processing-times').then(setProcessingTimes);
+    api.get('/admin/assignees').then(setAssignees);
   }, []);
 
   useEffect(() => {
@@ -112,10 +114,11 @@ export default function RequestDetail() {
     setAssignMessage('');
     try {
       const res = await api.patch(`/admin/requests/${id}/assign`, assignForm);
-      const parts = [];
-      parts.push(res.assigneeSent ? 'đã gửi email cho người xử lý' : 'email cho người xử lý chưa gửi được');
-      parts.push(res.requesterSent ? 'đã gửi email cho người yêu cầu' : 'email cho người yêu cầu chưa gửi được');
-      setAssignMessage(`Đã phân công — ${parts.join(', ')}.`);
+      setAssignMessage(
+        res.sent
+          ? 'Đã phân công — đã gửi email cho người yêu cầu (CC người phụ trách).'
+          : 'Đã phân công — email chưa gửi được, kiểm tra cấu hình SMTP.'
+      );
       load();
     } catch (err) {
       setAssignError(err.message);
@@ -367,6 +370,35 @@ export default function RequestDetail() {
 
       <form onSubmit={handleAssign} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
         <h2 className="font-semibold text-slate-900">Phân công xử lý</h2>
+        {assignees.length > 0 && (
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Chọn từ danh sách người phụ trách</label>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const picked = assignees.find((a) => String(a.id) === e.target.value);
+                if (picked) {
+                  setAssignForm({
+                    assigneeName: picked.name,
+                    assigneeEmail: picked.email,
+                    assigneePhone: picked.phone || '',
+                  });
+                }
+                e.target.value = '';
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+            >
+              <option value="">-- Chọn người phụ trách --</option>
+              {assignees
+                .filter((a) => a.active)
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.email})
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-slate-400 mb-1">Họ và tên</label>

@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import OrganicBackdrop from '../../components/OrganicBackdrop.jsx';
+import { FILE_TIME } from '../../utils/cacheBust.js';
 
 const NAV_ITEMS = [
   { to: '/admin', label: 'Tổng quan', icon: OverviewIcon, end: true },
@@ -9,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/admin/request-types', label: 'Loại yêu cầu', icon: TypeIcon },
   { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: ClockIcon },
   { to: '/admin/staff', label: 'Nhân sự', icon: StaffIcon },
+  { to: '/admin/assignees', label: 'Người phụ trách', icon: AssigneeIcon },
 ];
 
 export default function AdminLayout({ admin, onLoggedOut }) {
@@ -25,7 +27,7 @@ export default function AdminLayout({ admin, onLoggedOut }) {
       <OrganicBackdrop />
       <aside className="relative z-10 w-60 shrink-0 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 flex flex-col py-6 px-4 h-[calc(100vh-2rem)] sticky top-4">
         <div className="flex items-center px-2 mb-8">
-          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-9 w-auto" />
+          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-9 w-auto" />
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -116,6 +118,15 @@ function StaffIcon(props) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
       <circle cx="9" cy="8" r="3.5" />
       <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 8.5a3 3 0 1 1 4 2.83M17 14c2.8.3 4.5 1.6 4.5 3.3V20" />
+    </svg>
+  );
+}
+function AssigneeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
+      <path d="M9 12.5 11 14.5 15.5 10" />
     </svg>
   );
 }

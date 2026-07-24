@@ -12,6 +12,7 @@ import { adminAuthRouter } from './routes/admin.auth.routes.js';
 import { adminRequestsRouter } from './routes/admin.requests.routes.js';
 import { adminCategoriesRouter } from './routes/admin.categories.routes.js';
 import { adminStaffRouter } from './routes/admin.staff.routes.js';
+import { adminAssigneesRouter } from './routes/admin.assignees.routes.js';
 import { adminStatsRouter } from './routes/admin.stats.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,7 @@ export function createApp() {
   app.use('/api/admin/requests', adminRequestsRouter);
   app.use('/api/admin', adminCategoriesRouter);
   app.use('/api/admin/staff', adminStaffRouter);
+  app.use('/api/admin/assignees', adminAssigneesRouter);
   app.use('/api/admin/stats', adminStatsRouter);
 
   if (env.nodeEnv === 'production') {

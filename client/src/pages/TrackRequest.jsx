@@ -3,24 +3,25 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
+import { FILE_TIME } from '../utils/cacheBust.js';
 
 export default function TrackRequest() {
   const { code: codeParam } = useParams();
   const navigate = useNavigate();
-  const [code, setCode] = useState(codeParam || '');
+  const [q, setQ] = useState(codeParam || '');
+  const [results, setResults] = useState(null);
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
 
-  const search = async (e) => {
-    e?.preventDefault();
-    if (!code.trim()) return;
+  const loadByCode = async (code) => {
     setLoading(true);
     setError('');
+    setResults(null);
     setRequest(null);
     try {
-      const data = await api.get(`/track/${encodeURIComponent(code.trim())}`);
+      const data = await api.get(`/track/${encodeURIComponent(code)}`);
       setRequest(data);
       navigate(`/tra-cuu/${data.request_code}`, { replace: true });
     } catch (err) {
@@ -30,8 +31,32 @@ export default function TrackRequest() {
     }
   };
 
+  const handleSearch = async (e) => {
+    e?.preventDefault();
+    const query = q.trim();
+    if (!query) return;
+    setLoading(true);
+    setError('');
+    setResults(null);
+    setRequest(null);
+    try {
+      const rows = await api.get(`/track/search?q=${encodeURIComponent(query)}`);
+      if (rows.length === 0) {
+        setError('Không tìm thấy yêu cầu nào phù hợp.');
+      } else if (rows.length === 1) {
+        await loadByCode(rows[0].request_code);
+      } else {
+        setResults(rows);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (codeParam) search();
+    if (codeParam) loadByCode(codeParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -52,24 +77,24 @@ export default function TrackRequest() {
       <OrganicBackdrop />
       <div className="relative z-10 max-w-xl mx-auto">
         <div className="mb-6 text-center">
-          <img src="/logo.svg" alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
+          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
             Tra cứu yêu cầu hỗ trợ
           </h1>
           <p className="mt-2 text-slate-700 font-medium">
-            Nhập mã yêu cầu đã nhận được qua email để xem tình trạng xử lý.
+            Nhập mã yêu cầu, họ tên, email hoặc khoa/phòng/đơn vị để xem tình trạng xử lý.
           </p>
         </div>
 
         <form
-          onSubmit={search}
+          onSubmit={handleSearch}
           className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 flex gap-2"
         >
           <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="REQ-000123"
-            className="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-brand-400"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Mã yêu cầu / Họ tên / Email / Đơn vị"
+            className="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
           />
           <button
             type="submit"
@@ -83,6 +108,31 @@ export default function TrackRequest() {
         {error && (
           <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
             {error}
+          </div>
+        )}
+
+        {results && (
+          <div className="mt-5 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
+            <p className="px-4 pt-4 text-xs text-slate-400">{results.length} kết quả — chọn 1 yêu cầu để xem chi tiết</p>
+            {results.map((r) => (
+              <button
+                key={r.request_code}
+                onClick={() => loadByCode(r.request_code)}
+                className="w-full text-left px-4 py-3 hover:bg-slate-50 transition"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{r.requester_name}</p>
+                    <p className="text-xs text-slate-400 truncate">
+                      <span className="font-mono">{r.request_code}</span> · {r.department_name}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={r.status} />
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 

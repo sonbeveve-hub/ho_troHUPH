@@ -26,7 +26,13 @@ const LIST_SELECT = `
 adminRequestsRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { status, department_id: departmentId, request_type_id: requestTypeId, q } = req.query;
+    const {
+      status,
+      department_id: departmentId,
+      request_type_id: requestTypeId,
+      assignee_email: assigneeEmail,
+      q,
+    } = req.query;
     const page = Math.max(1, Number(req.query.page) || 1);
 
     const conditions = [];
@@ -43,6 +49,10 @@ adminRequestsRouter.get(
     if (requestTypeId) {
       conditions.push('requests.request_type_id = ?');
       params.push(requestTypeId);
+    }
+    if (assigneeEmail) {
+      conditions.push('requests.assignee_email = ?');
+      params.push(assigneeEmail);
     }
     if (q) {
       conditions.push('(requests.requester_name LIKE ? OR requests.request_code LIKE ? OR requests.requester_email LIKE ?)');
@@ -226,11 +236,7 @@ adminRequestsRouter.patch(
     ).run(req.params.id, nextStatus, `Đã phân công cho ${trimmedName} xử lý`);
 
     const updated = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
-    const emailResult = await sendAssignmentEmails(updated, {
-      departmentName: updated.department_name,
-      requestTypeName: updated.request_type_name,
-      processingTimeName: updated.processing_time_name,
-    });
+    const emailResult = await sendAssignmentEmails(updated);
 
     res.json({ ok: true, ...emailResult });
   })

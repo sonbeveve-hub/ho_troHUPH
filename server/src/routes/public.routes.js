@@ -208,6 +208,33 @@ const TRACK_SELECT = `
 `;
 
 publicRouter.get(
+  '/track/search',
+  trackRequestLimiter,
+  asyncHandler(async (req, res) => {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (q.length < 2) return res.json([]);
+
+    const like = `%${q}%`;
+    const rows = db
+      .prepare(
+        `SELECT requests.request_code, requests.requester_name, requests.status, requests.created_at,
+                departments.name AS department_name
+         FROM requests
+         LEFT JOIN departments ON departments.id = requests.department_id
+         WHERE requests.request_code LIKE ?
+            OR requests.requester_name LIKE ?
+            OR requests.requester_email LIKE ?
+            OR departments.name LIKE ?
+         ORDER BY requests.created_at DESC
+         LIMIT 20`
+      )
+      .all(like, like, like, like);
+
+    res.json(rows);
+  })
+);
+
+publicRouter.get(
   '/track/:code',
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
@@ -232,11 +259,11 @@ publicRouter.post(
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
     if (!request.requester_confirmed_at) {
-      db.prepare("UPDATE requests SET requester_confirmed_at = datetime('now') WHERE id = ?").run(
-        request.id
-      );
       db.prepare(
-        "INSERT INTO request_status_history (request_id, status, note) SELECT id, status, 'Người gửi xác nhận đã được hỗ trợ' FROM requests WHERE id = ?"
+        "UPDATE requests SET requester_confirmed_at = datetime('now'), status = 'done', updated_at = datetime('now') WHERE id = ?"
+      ).run(request.id);
+      db.prepare(
+        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã được hỗ trợ')"
       ).run(request.id);
     }
 

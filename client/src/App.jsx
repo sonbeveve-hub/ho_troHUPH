@@ -12,6 +12,7 @@ import Departments from './pages/admin/Departments.jsx';
 import RequestTypes from './pages/admin/RequestTypes.jsx';
 import ProcessingTimes from './pages/admin/ProcessingTimes.jsx';
 import Staff from './pages/admin/Staff.jsx';
+import Assignees from './pages/admin/Assignees.jsx';
 
 export default function App() {
   const [admin, setAdmin] = useState(undefined); // undefined = đang kiểm tra, null = chưa đăng nhập
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="request-types" element={<RequestTypes />} />
         <Route path="processing-times" element={<ProcessingTimes />} />
         <Route path="staff" element={<Staff />} />
+        <Route path="assignees" element={<Assignees />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

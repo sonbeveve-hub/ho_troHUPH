@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import StatusBreakdown from '../../components/charts/StatusBreakdown.jsx';
 import CategoryBar from '../../components/charts/CategoryBar.jsx';
 import TimeSeries from '../../components/charts/TimeSeries.jsx';
+import { StatusBadge } from '../../components/StatusBadge.jsx';
 
 const STATUS_LABEL = {
   new: 'Mới tiếp nhận',
@@ -20,11 +22,13 @@ const STATUS_DOT = {
 export default function Stats() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState([]);
+  const [byAssignee, setByAssignee] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/admin/stats/summary').then(setSummary).catch((err) => setError(err.message));
     api.get('/admin/stats/timeseries?days=30').then(setTimeseries).catch(() => {});
+    api.get('/admin/stats/by-assignee').then(setByAssignee).catch(() => {});
   }, []);
 
   if (error) {
@@ -74,7 +78,7 @@ export default function Stats() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div className="grid lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Theo loại yêu cầu</h2>
           <CategoryBar data={summary.byRequestType} color="#3FAE7C" />
@@ -84,6 +88,112 @@ export default function Stats() {
           <TimeSeries data={timeseries} />
         </div>
       </div>
+
+      <AssigneeProgress rows={byAssignee} />
+    </div>
+  );
+}
+
+function AssigneeProgress({ rows }) {
+  const [filterEmail, setFilterEmail] = useState('');
+  const [drillDown, setDrillDown] = useState([]);
+  const [loadingDrillDown, setLoadingDrillDown] = useState(false);
+
+  const filterable = rows.filter((r) => r.assignee_email);
+
+  useEffect(() => {
+    if (!filterEmail) {
+      setDrillDown([]);
+      return;
+    }
+    setLoadingDrillDown(true);
+    api
+      .get(`/admin/requests?assignee_email=${encodeURIComponent(filterEmail)}&page=1`)
+      .then((res) => setDrillDown(res.data))
+      .finally(() => setLoadingDrillDown(false));
+  }, [filterEmail]);
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mt-5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="font-semibold text-slate-900">Tiến độ theo người phụ trách</h2>
+        {filterable.length > 0 && (
+          <select
+            value={filterEmail}
+            onChange={(e) => setFilterEmail(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
+          >
+            <option value="">Lọc theo người phụ trách...</option>
+            {filterable.map((r) => (
+              <option key={r.assignee_email} value={r.assignee_email}>
+                {r.assignee_name} ({r.assignee_email})
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-slate-400">Chưa có dữ liệu.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-400 border-b border-slate-100">
+                <th className="py-2 pr-3 font-medium">Người phụ trách</th>
+                <th className="py-2 px-3 font-medium text-right">Tổng</th>
+                <th className="py-2 px-3 font-medium text-right">Mới</th>
+                <th className="py-2 px-3 font-medium text-right">Đang xử lý</th>
+                <th className="py-2 px-3 font-medium text-right">Hoàn thành</th>
+                <th className="py-2 pl-3 font-medium text-right">Từ chối</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.assignee_email || 'unassigned'} className="border-b border-slate-50 last:border-0">
+                  <td className="py-2 pr-3 text-slate-800">
+                    {r.assignee_name}
+                    {r.assignee_email && <span className="text-slate-400 text-xs ml-1">({r.assignee_email})</span>}
+                  </td>
+                  <td className="py-2 px-3 text-right font-medium text-slate-900">{r.total}</td>
+                  <td className="py-2 px-3 text-right text-slate-500">{r.new_count}</td>
+                  <td className="py-2 px-3 text-right text-slate-500">{r.in_progress_count}</td>
+                  <td className="py-2 px-3 text-right text-slate-500">{r.done_count}</td>
+                  <td className="py-2 pl-3 text-right text-slate-500">{r.rejected_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {filterEmail && (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          {loadingDrillDown ? (
+            <p className="text-sm text-slate-400">Đang tải...</p>
+          ) : drillDown.length === 0 ? (
+            <p className="text-sm text-slate-400">Không có yêu cầu nào.</p>
+          ) : (
+            <div className="space-y-2">
+              {drillDown.map((r) => (
+                <Link
+                  key={r.id}
+                  to={`/admin/requests/${r.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 hover:bg-slate-50 transition"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-800 truncate">
+                      <span className="font-mono text-xs text-slate-400 mr-2">{r.request_code}</span>
+                      {r.requester_name}
+                    </p>
+                  </div>
+                  <StatusBadge status={r.status} />
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { env, isSmtpConfigured } from '../config/env.js';
 import { db } from '../db/index.js';
 import { statusUpdateEmail } from '../templates/statusUpdateEmail.js';
 import { submissionConfirmationEmail } from '../templates/submissionConfirmationEmail.js';
-import { assignmentEmailForAssignee, assignmentEmailForRequester } from '../templates/assignmentEmail.js';
+import { assignmentEmailForRequester } from '../templates/assignmentEmail.js';
 
 // Message-ID gốc dùng chung cho mọi email của cùng 1 yêu cầu (kèm subject giống nhau ở
 // các template), để mail client (Outlook, Apple Mail...) gom chúng vào chung 1 luồng hội thoại
@@ -41,7 +41,18 @@ function logEmail({ requestId, to, subject, status, error }) {
   ).run(requestId, to, subject, status, error || null);
 }
 
-async function dispatchEmail({ requestId, to, subject, html, isThreadRoot }) {
+// CC mặc định (nvd@huph.edu.vn) áp cho MỌI email hệ thống gửi ra, gộp thêm với
+// bất kỳ CC nào truyền vào riêng cho từng email (ví dụ CC người phụ trách khi phân công).
+function buildCc(explicitCc) {
+  const set = new Set();
+  (Array.isArray(explicitCc) ? explicitCc : explicitCc ? [explicitCc] : []).forEach(
+    (e) => e && set.add(e)
+  );
+  if (env.notifyCcEmail) set.add(env.notifyCcEmail);
+  return set.size ? Array.from(set).join(', ') : undefined;
+}
+
+async function dispatchEmail({ requestId, to, cc, subject, html, isThreadRoot }) {
   const transport = getTransporter();
 
   if (!transport) {
@@ -51,6 +62,8 @@ async function dispatchEmail({ requestId, to, subject, html, isThreadRoot }) {
 
   const rootId = threadRootId(requestId);
   const mailOptions = { from: env.smtp.from, to, subject, html };
+  const ccList = buildCc(cc);
+  if (ccList) mailOptions.cc = ccList;
   if (isThreadRoot) {
     mailOptions.messageId = rootId;
   } else {
@@ -93,24 +106,16 @@ export async function sendSubmissionConfirmationEmail(
   });
 }
 
-export async function sendAssignmentEmails(request, { departmentName, requestTypeName, processingTimeName }) {
-  const toAssignee = assignmentEmailForAssignee({ request, departmentName, requestTypeName, processingTimeName });
-  const toRequester = assignmentEmailForRequester({ request });
-
-  const [assigneeResult, requesterResult] = await Promise.all([
-    dispatchEmail({
-      requestId: request.id,
-      to: request.assignee_email,
-      subject: toAssignee.subject,
-      html: toAssignee.html,
-    }),
-    dispatchEmail({
-      requestId: request.id,
-      to: request.requester_email,
-      subject: toRequester.subject,
-      html: toRequester.html,
-    }),
-  ]);
-
-  return { assigneeSent: assigneeResult.sent, requesterSent: requesterResult.sent };
+// Chỉ gửi 1 email (tới người yêu cầu), CC thêm người phụ trách — không gửi email riêng
+// cho người phụ trách nữa.
+export async function sendAssignmentEmails(request) {
+  const { subject, html } = assignmentEmailForRequester({ request });
+  const result = await dispatchEmail({
+    requestId: request.id,
+    to: request.requester_email,
+    cc: request.assignee_email,
+    subject,
+    html,
+  });
+  return { sent: result.sent };
 }
