@@ -39,7 +39,7 @@ export function importStaffFromExcel(buffer) {
   const rows = parseWorkbook(buffer);
   const result = { inserted: 0, updated: 0, errors: [] };
 
-  const findByEmail = db.prepare('SELECT id FROM staff WHERE email = ? AND email != \'\'');
+  const findByEmail = db.prepare("SELECT id FROM staff WHERE email = ? COLLATE NOCASE AND email != ''");
   const findByNameDept = db.prepare(
     'SELECT id FROM staff WHERE normalized_name = ? AND department_id IS ?'
   );

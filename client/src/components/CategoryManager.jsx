@@ -16,10 +16,19 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const load = () => {
     api.get(apiBase).then(setItems);
   };
   useEffect(load, [apiBase]);
+
+  useEffect(() => {
+    const validIds = new Set(items.map((i) => i.id));
+    setSelectedIds((prev) => new Set([...prev].filter((id) => validIds.has(id))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const visibleItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -78,6 +87,36 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
     }
   };
 
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = items.length > 0 && selectedIds.size === items.length;
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(items.map((i) => i.id)));
+  };
+
+  const bulkSetActive = async (active) => {
+    setBulkBusy(true);
+    setError('');
+    try {
+      await Promise.all(
+        [...selectedIds].map((id) => api.patch(`${apiBase}/${id}`, { active: active ? 1 : 0 }))
+      );
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const move = async (item, direction) => {
     await api.patch(`${apiBase}/${item.id}/move`, { direction });
     load();
@@ -118,7 +157,38 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
       </form>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-      {items.length > 0 && <p className="text-xs text-slate-400 mb-2">{items.length} mục</p>}
+      {items.length > 0 && (
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              className="rounded border-slate-300"
+            />
+            Chọn tất cả ({items.length} mục)
+          </label>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">Đã chọn {selectedIds.size}</span>
+              <button
+                onClick={() => bulkSetActive(true)}
+                disabled={bulkBusy}
+                className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-60"
+              >
+                Kích hoạt
+              </button>
+              <button
+                onClick={() => bulkSetActive(false)}
+                disabled={bulkBusy}
+                className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Vô hiệu hoá
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {visibleItems.map((item, visibleIndex) => {
@@ -158,6 +228,12 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelected(item.id)}
+                  className="rounded border-slate-300 shrink-0"
+                />
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => move(item, 'up')}
