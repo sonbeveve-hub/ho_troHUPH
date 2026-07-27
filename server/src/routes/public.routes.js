@@ -196,7 +196,7 @@ publicRouter.post(
   })
 );
 
-const TRACK_SELECT = `
+const TRACK_SELECT_BASE = `
   SELECT requests.id, requests.request_code, requests.requester_name, requests.description,
          requests.status, requests.assignee_name, requests.requester_confirmed_at,
          requests.created_at, requests.updated_at,
@@ -206,8 +206,13 @@ const TRACK_SELECT = `
   LEFT JOIN departments ON departments.id = requests.department_id
   LEFT JOIN request_types ON request_types.id = requests.request_type_id
   LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
-  WHERE requests.request_code = ?
 `;
+
+function getRequestHistory(requestId) {
+  return db
+    .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
+    .all(requestId);
+}
 
 publicRouter.get(
   '/track/search',
@@ -219,10 +224,7 @@ publicRouter.get(
     const like = `%${q}%`;
     const rows = db
       .prepare(
-        `SELECT requests.request_code, requests.requester_name, requests.status, requests.created_at,
-                departments.name AS department_name
-         FROM requests
-         LEFT JOIN departments ON departments.id = requests.department_id
+        `${TRACK_SELECT_BASE}
          WHERE requests.request_code LIKE ?
             OR requests.requester_name LIKE ?
             OR requests.requester_email LIKE ?
@@ -232,7 +234,7 @@ publicRouter.get(
       )
       .all(like, like, like, like);
 
-    res.json(rows);
+    res.json(rows.map((r) => ({ ...r, history: getRequestHistory(r.id) })));
   })
 );
 
@@ -240,14 +242,12 @@ publicRouter.get(
   '/track/:code',
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
-    const request = db.prepare(TRACK_SELECT).get(req.params.code.trim().toUpperCase());
+    const request = db
+      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
+      .get(req.params.code.trim().toUpperCase());
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
-    const history = db
-      .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
-      .all(request.id);
-
-    res.json({ ...request, history });
+    res.json({ ...request, history: getRequestHistory(request.id) });
   })
 );
 
@@ -269,11 +269,10 @@ publicRouter.post(
       ).run(request.id);
     }
 
-    const updated = db.prepare(TRACK_SELECT).get(req.params.code.trim().toUpperCase());
-    const history = db
-      .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
-      .all(request.id);
-    res.json({ ...updated, history });
+    const updated = db
+      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
+      .get(req.params.code.trim().toUpperCase());
+    res.json({ ...updated, history: getRequestHistory(request.id) });
   })
 );
 
