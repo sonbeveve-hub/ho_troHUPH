@@ -13,7 +13,7 @@ export default function StaffEmailField({ name, value, onChange }) {
 
     if (matches.length === 1) {
       setMode('auto');
-      onChange({ email: matches[0].email || '', source: 'auto' });
+      onChange({ email: matches[0].email || '', source: 'auto', departmentId: matches[0].department_id || null });
     } else if (matches.length > 1) {
       setMode('picked');
       onChange({ email: '', source: 'picked' });
@@ -60,7 +60,10 @@ export default function StaffEmailField({ name, value, onChange }) {
         </label>
         <select
           value={value}
-          onChange={(e) => onChange({ email: e.target.value, source: 'picked' })}
+          onChange={(e) => {
+            const picked = matches.find((m) => (m.email || '') === e.target.value);
+            onChange({ email: e.target.value, source: 'picked', departmentId: picked?.department_id || null });
+          }}
           className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
         >
           <option value="">-- Có {matches.length} người trùng tên, vui lòng chọn --</option>

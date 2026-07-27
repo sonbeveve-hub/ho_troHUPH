@@ -41,6 +41,13 @@ export default function PublicRequestForm() {
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
+  const handleEmailChange = (payload) => {
+    setEmail(payload);
+    if (payload.departmentId) {
+      setForm((f) => ({ ...f, departmentId: String(payload.departmentId) }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -176,7 +183,7 @@ export default function PublicRequestForm() {
             </select>
           </div>
 
-          <StaffEmailField name={form.requesterName} value={email.email} onChange={setEmail} />
+          <StaffEmailField name={form.requesterName} value={email.email} onChange={handleEmailChange} />
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Loại yêu cầu</label>
