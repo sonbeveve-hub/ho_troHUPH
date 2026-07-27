@@ -44,6 +44,41 @@ export function getByAssignee() {
     .all();
 }
 
+export function getAiStats() {
+  const summary = db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN ai_suggestion IS NOT NULL THEN 1 ELSE 0 END) AS total_suggested,
+         SUM(CASE WHEN ai_resolved = 1 THEN 1 ELSE 0 END) AS resolved_count,
+         SUM(CASE WHEN ai_resolved = 0 THEN 1 ELSE 0 END) AS unresolved_count,
+         SUM(CASE WHEN ai_suggestion IS NOT NULL AND ai_resolved IS NULL THEN 1 ELSE 0 END) AS no_feedback_count,
+         SUM(CASE WHEN ai_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
+         AVG(ai_rating) AS avg_rating
+       FROM requests`
+    )
+    .get();
+
+  const ratingBreakdown = db
+    .prepare(
+      `SELECT ai_rating AS rating, COUNT(*) AS count
+       FROM requests
+       WHERE ai_rating IS NOT NULL
+       GROUP BY ai_rating
+       ORDER BY ai_rating DESC`
+    )
+    .all();
+
+  return {
+    totalSuggested: summary.total_suggested || 0,
+    resolvedCount: summary.resolved_count || 0,
+    unresolvedCount: summary.unresolved_count || 0,
+    noFeedbackCount: summary.no_feedback_count || 0,
+    ratingCount: summary.rating_count || 0,
+    avgRating: summary.avg_rating || null,
+    ratingBreakdown,
+  };
+}
+
 export function getTimeseries(days = 30) {
   return db
     .prepare(

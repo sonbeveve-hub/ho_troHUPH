@@ -23,12 +23,14 @@ export default function Stats() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState([]);
   const [byAssignee, setByAssignee] = useState([]);
+  const [aiStats, setAiStats] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/admin/stats/summary').then(setSummary).catch((err) => setError(err.message));
     api.get('/admin/stats/timeseries?days=30').then(setTimeseries).catch(() => {});
     api.get('/admin/stats/by-assignee').then(setByAssignee).catch(() => {});
+    api.get('/admin/stats/ai').then(setAiStats).catch(() => {});
   }, []);
 
   if (error) {
@@ -89,7 +91,78 @@ export default function Stats() {
         </div>
       </div>
 
+      {aiStats && <AiFeedbackStats stats={aiStats} />}
+
       <AssigneeProgress rows={byAssignee} />
+    </div>
+  );
+}
+
+function AiFeedbackStats({ stats }) {
+  const { totalSuggested, resolvedCount, unresolvedCount, noFeedbackCount, ratingCount, avgRating, ratingBreakdown } =
+    stats;
+  const answeredCount = resolvedCount + unresolvedCount;
+  const resolveRate = answeredCount > 0 ? Math.round((resolvedCount / answeredCount) * 100) : null;
+  const ratingMap = Object.fromEntries(ratingBreakdown.map((r) => [r.rating, r.count]));
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mt-5">
+      <h2 className="font-semibold text-slate-900 mb-4">🤖 Đánh giá phản hồi/hỗ trợ của Trợ lý AI hỗ trợ kỹ thuật</h2>
+
+      {totalSuggested === 0 ? (
+        <p className="text-sm text-slate-400">Chưa có yêu cầu nào được AI phân tích.</p>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-2 gap-3">
+            <MiniStat label="Đã gợi ý" value={totalSuggested} />
+            <MiniStat
+              label="Tỷ lệ tự khắc phục"
+              value={resolveRate === null ? '—' : `${resolveRate}%`}
+              sub={`${resolvedCount}/${answeredCount || 0} phản hồi`}
+            />
+            <MiniStat label="Đã khắc phục" value={resolvedCount} dotClass="bg-emerald-500" />
+            <MiniStat label="Chưa khắc phục" value={unresolvedCount} dotClass="bg-amber-500" />
+            <MiniStat label="Chưa phản hồi" value={noFeedbackCount} dotClass="bg-slate-300" />
+            <MiniStat
+              label="Điểm đánh giá TB"
+              value={avgRating ? `${avgRating.toFixed(1)} ★` : '—'}
+              sub={`${ratingCount} lượt đánh giá`}
+            />
+          </div>
+
+          <div>
+            <p className="text-xs text-slate-400 mb-2">Phân bố đánh giá sao</p>
+            <div className="space-y-1.5">
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = ratingMap[star] || 0;
+                const pct = ratingCount > 0 ? (count / ratingCount) * 100 : 0;
+                return (
+                  <div key={star} className="flex items-center gap-2 text-xs">
+                    <span className="w-8 text-slate-500 shrink-0">{star} ★</span>
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, sub, dotClass }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+        {dotClass && <span className={`h-2 w-2 rounded-full ${dotClass}`} />}
+        {label}
+      </p>
+      <p className="mt-0.5 text-lg font-semibold text-slate-900">{value}</p>
+      {sub && <p className="text-[11px] text-slate-400">{sub}</p>}
     </div>
   );
 }

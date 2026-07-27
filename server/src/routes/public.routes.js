@@ -346,7 +346,15 @@ publicRouter.post(
 
     db.prepare('UPDATE requests SET ai_resolved = ? WHERE id = ?').run(resolved ? 1 : 0, request.id);
 
-    if (resolved) return res.json({ ok: true });
+    if (resolved) {
+      db.prepare("UPDATE requests SET status = 'done', updated_at = datetime('now') WHERE id = ?").run(
+        request.id
+      );
+      db.prepare(
+        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã khắc phục được theo gợi ý của Trợ lý AI')"
+      ).run(request.id);
+      return res.json({ ok: true });
+    }
 
     if (request.ai_alternative_suggestion) {
       return res.json({ suggestion: request.ai_alternative_suggestion });
