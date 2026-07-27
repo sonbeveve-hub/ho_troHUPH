@@ -3,9 +3,11 @@ import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
-import { submitRequestLimiter, trackRequestLimiter } from '../middleware/rateLimit.js';
+import { submitRequestLimiter, trackRequestLimiter, aiLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail } from '../services/email.service.js';
+import { getInitialSuggestion, getAlternativeSuggestion } from '../services/ai.service.js';
+import { isGeminiConfigured } from '../config/env.js';
 
 export const publicRouter = Router();
 
@@ -272,5 +274,120 @@ publicRouter.post(
       .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
       .all(request.id);
     res.json({ ...updated, history });
+  })
+);
+
+const AI_CONTEXT_SELECT = `
+  SELECT requests.id, requests.description, requests.ai_suggestion, requests.ai_alternative_suggestion,
+         requests.ai_resolved, requests.ai_rating,
+         departments.name AS department_name, request_types.name AS request_type_name
+  FROM requests
+  LEFT JOIN departments ON departments.id = requests.department_id
+  LEFT JOIN request_types ON request_types.id = requests.request_type_id
+  WHERE requests.request_code = ?
+`;
+
+function getAttachmentsFor(requestId) {
+  return db
+    .prepare('SELECT stored_name, mime_type FROM request_attachments WHERE request_id = ?')
+    .all(requestId);
+}
+
+// Gợi ý khắc phục ban đầu từ AI (Gemini) — gọi ngay sau khi người gửi tạo yêu cầu thành công.
+// Idempotent: nếu đã có gợi ý (đã gọi trước đó), trả lại luôn, không gọi lại Gemini.
+publicRouter.post(
+  '/requests/:code/ai-suggestion',
+  aiLimiter,
+  asyncHandler(async (req, res) => {
+    const code = req.params.code.trim().toUpperCase();
+    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+
+    if (request.ai_suggestion) {
+      return res.json({ suggestion: request.ai_suggestion, configured: true });
+    }
+    if (!isGeminiConfigured()) {
+      return res.json({ suggestion: null, configured: false });
+    }
+
+    try {
+      const suggestion = await getInitialSuggestion({
+        requestId: request.id,
+        description: request.description,
+        departmentName: request.department_name,
+        requestTypeName: request.request_type_name,
+        attachments: getAttachmentsFor(request.id),
+      });
+      if (suggestion) {
+        db.prepare('UPDATE requests SET ai_suggestion = ? WHERE id = ?').run(suggestion, request.id);
+      }
+      res.json({ suggestion, configured: true });
+    } catch (err) {
+      console.error('[ai] Lỗi khi gọi Gemini:', err.message);
+      res.json({ suggestion: null, configured: true, error: true });
+    }
+  })
+);
+
+// Phản hồi của người gửi sau khi xem gợi ý: đã khắc phục được hay chưa.
+// Nếu chưa, xin AI đưa ra hướng khác (chỉ 1 lần, idempotent như trên).
+publicRouter.post(
+  '/requests/:code/ai-feedback',
+  aiLimiter,
+  asyncHandler(async (req, res) => {
+    const code = req.params.code.trim().toUpperCase();
+    const { resolved } = req.body || {};
+    if (typeof resolved !== 'boolean') {
+      return res.status(400).json({ error: 'Thiếu thông tin phản hồi.' });
+    }
+
+    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+
+    db.prepare('UPDATE requests SET ai_resolved = ? WHERE id = ?').run(resolved ? 1 : 0, request.id);
+
+    if (resolved) return res.json({ ok: true });
+
+    if (request.ai_alternative_suggestion) {
+      return res.json({ suggestion: request.ai_alternative_suggestion });
+    }
+    if (!isGeminiConfigured() || !request.ai_suggestion) {
+      return res.json({ suggestion: null });
+    }
+
+    try {
+      const suggestion = await getAlternativeSuggestion({
+        requestId: request.id,
+        description: request.description,
+        departmentName: request.department_name,
+        requestTypeName: request.request_type_name,
+        attachments: getAttachmentsFor(request.id),
+        previousSuggestion: request.ai_suggestion,
+      });
+      if (suggestion) {
+        db.prepare('UPDATE requests SET ai_alternative_suggestion = ? WHERE id = ?').run(suggestion, request.id);
+      }
+      res.json({ suggestion });
+    } catch (err) {
+      console.error('[ai] Lỗi khi gọi Gemini (phương án khác):', err.message);
+      res.json({ suggestion: null, error: true });
+    }
+  })
+);
+
+publicRouter.post(
+  '/requests/:code/ai-rating',
+  aiLimiter,
+  asyncHandler(async (req, res) => {
+    const code = req.params.code.trim().toUpperCase();
+    const rating = Number(req.body?.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Đánh giá không hợp lệ.' });
+    }
+
+    const info = db.prepare('UPDATE requests SET ai_rating = ? WHERE request_code = ?').run(rating, code);
+    if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+
+    res.json({ ok: true });
   })
 );

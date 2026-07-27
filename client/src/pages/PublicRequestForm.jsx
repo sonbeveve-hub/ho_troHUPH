@@ -4,7 +4,11 @@ import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
+import ChatWidget from '../components/ChatWidget.jsx';
 import { FILE_TIME } from '../utils/cacheBust.js';
+
+// eslint-disable-next-line no-undef
+const APP_VERSION = __APP_VERSION__;
 
 const EMPTY_FORM = {
   requesterName: '',
@@ -27,6 +31,7 @@ export default function PublicRequestForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
+  const [showChat, setShowChat] = useState(true);
 
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => setDepartments([]));
@@ -92,6 +97,7 @@ export default function PublicRequestForm() {
               setForm(EMPTY_FORM);
               setEmail({ email: '', source: 'manual' });
               setImages([]);
+              setShowChat(true);
             }}
             className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
           >
@@ -103,6 +109,7 @@ export default function PublicRequestForm() {
             </Link>
           </p>
         </div>
+        {showChat && <ChatWidget requestCode={success} onClose={() => setShowChat(false)} />}
       </div>
     );
   }
@@ -244,6 +251,7 @@ export default function PublicRequestForm() {
             Tra cứu tình trạng xử lý
           </Link>
         </p>
+        <p className="mt-2 text-center text-xs text-slate-400">Phiên bản v{APP_VERSION}</p>
       </div>
     </div>
   );

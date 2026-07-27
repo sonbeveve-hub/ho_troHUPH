@@ -111,6 +111,19 @@ function migrateAddRequesterConfirmedAt() {
   db.exec('ALTER TABLE requests ADD COLUMN requester_confirmed_at TEXT;');
 }
 
+// Thêm các cột phục vụ tính năng AI gợi ý khắc phục sự cố (chatbox sau khi gửi yêu cầu).
+function migrateAddAiColumns() {
+  const columns = db.prepare('PRAGMA table_info(requests)').all();
+  if (columns.some((c) => c.name === 'ai_suggestion')) return;
+
+  db.exec(`
+    ALTER TABLE requests ADD COLUMN ai_suggestion TEXT;
+    ALTER TABLE requests ADD COLUMN ai_alternative_suggestion TEXT;
+    ALTER TABLE requests ADD COLUMN ai_resolved INTEGER;
+    ALTER TABLE requests ADD COLUMN ai_rating INTEGER;
+  `);
+}
+
 export function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
@@ -118,6 +131,7 @@ export function migrate() {
   migrateAddAssigneeColumns();
   migrateAddSortOrder();
   migrateAddRequesterConfirmedAt();
+  migrateAddAiColumns();
   // Idempotent — bảo đảm index này luôn tồn tại dù đi qua nhánh nào ở trên.
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');
 }

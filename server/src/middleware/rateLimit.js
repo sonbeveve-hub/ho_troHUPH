@@ -15,3 +15,11 @@ export const trackRequestLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Bạn tra cứu quá nhiều lần trong thời gian ngắn. Vui lòng thử lại sau.' },
 });
+
+export const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn thao tác quá nhiều lần trong thời gian ngắn. Vui lòng thử lại sau.' },
+});

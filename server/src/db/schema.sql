@@ -69,6 +69,10 @@ CREATE TABLE IF NOT EXISTS requests (
   assignee_phone TEXT,
   assigned_at TEXT,
   requester_confirmed_at TEXT,
+  ai_suggestion TEXT,
+  ai_alternative_suggestion TEXT,
+  ai_resolved INTEGER,
+  ai_rating INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

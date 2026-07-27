@@ -304,6 +304,25 @@ export default function RequestDetail() {
               <dt className="text-slate-400 text-sm">Mô tả</dt>
               <dd className="text-slate-800 mt-1 whitespace-pre-wrap">{request.description}</dd>
             </div>
+
+            {request.ai_suggestion && (
+              <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                <p className="text-xs font-semibold text-slate-500 mb-2">🤖 Gợi ý từ AI</p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.ai_suggestion}</p>
+                {request.ai_alternative_suggestion && (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 mt-3 mb-1">Phương án khác (sau khi người gửi báo chưa khắc phục được)</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.ai_alternative_suggestion}</p>
+                  </>
+                )}
+                <p className="text-xs text-slate-400 mt-3">
+                  {request.ai_resolved === 1 && '✓ Người gửi báo đã khắc phục được'}
+                  {request.ai_resolved === 0 && '⚠ Người gửi báo chưa khắc phục được'}
+                  {request.ai_resolved == null && 'Chưa có phản hồi từ người gửi'}
+                  {request.ai_rating ? ` · Đánh giá: ${'★'.repeat(request.ai_rating)}${'☆'.repeat(5 - request.ai_rating)}` : ''}
+                </p>
+              </div>
+            )}
           </>
         )}
 
