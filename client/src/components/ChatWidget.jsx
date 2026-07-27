@@ -92,7 +92,7 @@ export default function ChatWidget({ requestCode, onClose }) {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm">
+    <div className="w-full">
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/10 border border-white/60 flex flex-col max-h-[70vh]">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100">
           <div className="flex items-center gap-2 min-w-0">

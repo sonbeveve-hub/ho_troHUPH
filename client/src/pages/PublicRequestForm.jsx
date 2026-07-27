@@ -80,36 +80,38 @@ export default function PublicRequestForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4 py-10">
         <OrganicBackdrop />
-        <div className="relative z-10 max-w-md w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-8 text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
-            ✓
+        <div className="relative z-10 max-w-md w-full flex flex-col items-center gap-4">
+          <div className="w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-8 text-center">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
+              ✓
+            </div>
+            <h1 className="text-xl font-semibold text-slate-900">Đã gửi yêu cầu thành công</h1>
+            <p className="mt-2 text-slate-600">
+              Mã yêu cầu của thầy/cô là <span className="font-mono font-semibold">{success}</span>.
+              TTTH sẽ gửi email cập nhật tiến độ xử lý tới địa chỉ thầy/cô đã cung cấp.
+            </p>
+            <button
+              onClick={() => {
+                setSuccess(null);
+                setForm(EMPTY_FORM);
+                setEmail({ email: '', source: 'manual' });
+                setImages([]);
+                setShowChat(true);
+              }}
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
+            >
+              Gửi yêu cầu khác <span aria-hidden="true">→</span>
+            </button>
+            <p className="mt-4">
+              <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 hover:underline">
+                Xem tình trạng xử lý
+              </Link>
+            </p>
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">Đã gửi yêu cầu thành công</h1>
-          <p className="mt-2 text-slate-600">
-            Mã yêu cầu của bạn là <span className="font-mono font-semibold">{success}</span>.
-            Chúng tôi sẽ gửi email cập nhật tiến độ xử lý tới địa chỉ bạn đã cung cấp.
-          </p>
-          <button
-            onClick={() => {
-              setSuccess(null);
-              setForm(EMPTY_FORM);
-              setEmail({ email: '', source: 'manual' });
-              setImages([]);
-              setShowChat(true);
-            }}
-            className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
-          >
-            Gửi yêu cầu khác <span aria-hidden="true">→</span>
-          </button>
-          <p className="mt-4">
-            <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 hover:underline">
-              Xem tình trạng xử lý
-            </Link>
-          </p>
+          {showChat && <ChatWidget requestCode={success} onClose={() => setShowChat(false)} />}
         </div>
-        {showChat && <ChatWidget requestCode={success} onClose={() => setShowChat(false)} />}
       </div>
     );
   }
