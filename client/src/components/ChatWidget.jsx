@@ -9,6 +9,8 @@ export default function ChatWidget({ requestCode, onClose }) {
   ]);
   const [phase, setPhase] = useState('loading'); // loading | ask | rating | done | unavailable
   const [busy, setBusy] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatBusy, setChatBusy] = useState(false);
   const bottomRef = useRef(null);
 
   const pushAi = (text) => setMessages((m) => [...m, { from: 'ai', text }]);
@@ -77,6 +79,30 @@ export default function ChatWidget({ requestCode, onClose }) {
     }
   };
 
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    const text = chatInput.trim();
+    if (!text || chatBusy) return;
+    const history = messages;
+    setChatInput('');
+    pushUser(text);
+    setChatBusy(true);
+    try {
+      const res = await api.post(`/requests/${encodeURIComponent(requestCode)}/ai-chat`, {
+        message: text,
+        history,
+      });
+      pushAi(
+        res.reply ||
+          'Hiện em chưa thể phản hồi câu hỏi này. Đội ngũ hỗ trợ của Trung tâm sẽ hỗ trợ thêm qua email ạ.'
+      );
+    } catch {
+      pushAi('Hiện em chưa thể phản hồi câu hỏi này. Đội ngũ hỗ trợ của Trung tâm sẽ hỗ trợ thêm qua email ạ.');
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
   const handleRate = async (rating) => {
     setBusy(true);
     pushUser(`${rating} sao`);
@@ -120,7 +146,7 @@ export default function ChatWidget({ requestCode, onClose }) {
               </div>
             </div>
           ))}
-          {(phase === 'loading' || phase === 'working') && (
+          {(phase === 'loading' || phase === 'working' || chatBusy) && (
             <div className="flex justify-start">
               <div className="bg-slate-100 text-slate-400 rounded-2xl px-3 py-2 text-sm">Đang soạn phản hồi...</div>
             </div>
@@ -161,6 +187,25 @@ export default function ChatWidget({ requestCode, onClose }) {
               </button>
             ))}
           </div>
+        )}
+
+        {phase !== 'loading' && phase !== 'unavailable' && (
+          <form onSubmit={handleSendChat} className="flex gap-2 px-4 py-3 border-t border-slate-100">
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Nhập câu hỏi cho Trợ lý AI..."
+              disabled={chatBusy}
+              className="flex-1 rounded-full border border-slate-200 bg-white/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={chatBusy || !chatInput.trim()}
+              className="shrink-0 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:shadow-lg disabled:opacity-60"
+            >
+              Gửi
+            </button>
+          </form>
         )}
       </div>
     </div>

@@ -3,10 +3,10 @@ import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
-import { submitRequestLimiter, trackRequestLimiter, aiLimiter } from '../middleware/rateLimit.js';
+import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail } from '../services/email.service.js';
-import { getInitialSuggestion, getAlternativeSuggestion } from '../services/ai.service.js';
+import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
 import { isGeminiConfigured } from '../config/env.js';
 
 export const publicRouter = Router();
@@ -396,5 +396,44 @@ publicRouter.post(
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
     res.json({ ok: true });
+  })
+);
+
+// Trò chuyện tự do với AI về yêu cầu này — client tự giữ lịch sử hội thoại và gửi kèm mỗi lần
+// (server không lưu transcript), để người gửi có thể hỏi thêm/phản hồi qua lại với AI.
+publicRouter.post(
+  '/requests/:code/ai-chat',
+  aiChatLimiter,
+  asyncHandler(async (req, res) => {
+    const code = req.params.code.trim().toUpperCase();
+    const { message, history } = req.body || {};
+    if (typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập nội dung.' });
+    }
+    if (message.length > 1000) {
+      return res.status(400).json({ error: 'Nội dung quá dài.' });
+    }
+
+    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+    if (!isGeminiConfigured()) {
+      return res.json({ reply: null });
+    }
+
+    try {
+      const reply = await getChatReply({
+        requestId: request.id,
+        description: request.description,
+        departmentName: request.department_name,
+        requestTypeName: request.request_type_name,
+        attachments: getAttachmentsFor(request.id),
+        history: Array.isArray(history) ? history.slice(-20) : [],
+        userMessage: message.trim(),
+      });
+      res.json({ reply });
+    } catch (err) {
+      console.error('[ai] Lỗi khi gọi Gemini (chat):', err.message);
+      res.json({ reply: null, error: true });
+    }
   })
 );

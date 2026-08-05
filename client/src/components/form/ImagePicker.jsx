@@ -9,6 +9,7 @@ function formatMB(bytes) {
 
 export default function ImagePicker({ files, onChange }) {
   const inputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [error, setError] = useState('');
   const [previews, setPreviews] = useState([]);
 
@@ -75,18 +76,36 @@ export default function ImagePicker({ files, onChange }) {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80 w-full"
-      >
-        + Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
+        >
+          + Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
+        </button>
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          title="Chụp ảnh bằng camera"
+          className="shrink-0 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
+        >
+          📷 Chụp ảnh
+        </button>
+      </div>
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         multiple
+        onChange={handlePick}
+        className="hidden"
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handlePick}
         className="hidden"
       />
