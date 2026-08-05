@@ -33,7 +33,15 @@ const defaultRequestTypes = [
 
 const defaultProcessingTimes = ['1', '3', '5', '7', '15'];
 
+// Chỉ seed từng bảng khi bảng đó ĐANG RỖNG (cài đặt mới hoàn toàn). Trước đây seed() chạy
+// vô điều kiện mỗi lần server khởi động, dùng INSERT OR IGNORE theo tên — nhưng OR IGNORE chỉ
+// bỏ qua khi tên còn y nguyên, nên mỗi khi admin xoá hoặc đổi tên 1 mục mặc định, lần khởi động
+// kế tiếp sẽ tạo lại y hệt mục đó (hồi sinh mục đã xoá / tạo bản trùng cho mục đã đổi tên).
 export function seed() {
+  const deptCount = db.prepare('SELECT COUNT(*) AS c FROM departments').get().c;
+  const typeCount = db.prepare('SELECT COUNT(*) AS c FROM request_types').get().c;
+  const processingTimeCount = db.prepare('SELECT COUNT(*) AS c FROM processing_times').get().c;
+
   const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name, sort_order) VALUES (?, ?)');
   const insertType = db.prepare(
     'INSERT OR IGNORE INTO request_types (name, description, sort_order) VALUES (?, ?, ?)'
@@ -43,11 +51,17 @@ export function seed() {
   );
 
   const seedAll = db.transaction(() => {
-    defaultDepartments.forEach((name, index) => insertDept.run(name, index + 1));
-    defaultRequestTypes.forEach(([name, description], index) =>
-      insertType.run(name, description, index + 1)
-    );
-    defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
+    if (deptCount === 0) {
+      defaultDepartments.forEach((name, index) => insertDept.run(name, index + 1));
+    }
+    if (typeCount === 0) {
+      defaultRequestTypes.forEach(([name, description], index) =>
+        insertType.run(name, description, index + 1)
+      );
+    }
+    if (processingTimeCount === 0) {
+      defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
+    }
   });
 
   seedAll();

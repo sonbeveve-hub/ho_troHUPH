@@ -43,9 +43,11 @@ export default function PublicRequestForm() {
 
   const handleEmailChange = (payload) => {
     setEmail(payload);
-    if (payload.departmentId) {
-      setForm((f) => ({ ...f, departmentId: String(payload.departmentId) }));
-    }
+    setForm((f) => ({
+      ...f,
+      ...(payload.departmentId ? { departmentId: String(payload.departmentId) } : {}),
+      ...(payload.name ? { requesterName: payload.name } : {}),
+    }));
   };
 
   const handleSubmit = async (e) => {
