@@ -2,8 +2,8 @@ import * as XLSX from 'xlsx';
 import { db } from '../db/index.js';
 import { normalizeText } from '../utils/normalizeText.js';
 
-function parseWorkbook(buffer) {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+function parseWorkbook(buffer, { cellDates = false } = {}) {
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   return XLSX.utils.sheet_to_json(sheet, { defval: '' });
 }
@@ -138,4 +138,81 @@ export function importRequestTypesFromExcel(buffer) {
 
 export function importProcessingTimesFromExcel(buffer) {
   return importSimpleCategory(buffer, 'processing_times', false);
+}
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+// Chấp nhận nhiều định dạng: ô ngày thật trong Excel (Date), 'DD/MM/YYYY' hoặc 'DD-MM-YYYY'
+// (có năm → không lặp lại, trừ khi cột "Lặp lại" ghi đè), 'DD/MM' hoặc 'DD-MM' (không năm →
+// mặc định lặp lại hàng năm). Trả về { date, recurring } hoặc null nếu không đọc được.
+function parseHolidayDate(rawValue, recurringOverride) {
+  if (rawValue instanceof Date && !Number.isNaN(rawValue.getTime())) {
+    return {
+      date: recurringOverride === false
+        ? `${rawValue.getFullYear()}-${pad2(rawValue.getMonth() + 1)}-${pad2(rawValue.getDate())}`
+        : `${pad2(rawValue.getMonth() + 1)}-${pad2(rawValue.getDate())}`,
+      recurring: recurringOverride === false ? 0 : 1,
+    };
+  }
+
+  const text = String(rawValue).trim();
+  const withYear = text.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (withYear) {
+    const [, d, m, y] = withYear;
+    const recurring = recurringOverride === undefined ? false : recurringOverride;
+    return {
+      date: recurring ? `${pad2(m)}-${pad2(d)}` : `${y}-${pad2(m)}-${pad2(d)}`,
+      recurring: recurring ? 1 : 0,
+    };
+  }
+  const isoWithYear = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoWithYear) {
+    const [, y, m, d] = isoWithYear;
+    const recurring = recurringOverride === undefined ? false : recurringOverride;
+    return {
+      date: recurring ? `${pad2(m)}-${pad2(d)}` : `${y}-${pad2(m)}-${pad2(d)}`,
+      recurring: recurring ? 1 : 0,
+    };
+  }
+  const noYear = text.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+  if (noYear) {
+    const [, d, m] = noYear;
+    return { date: `${pad2(m)}-${pad2(d)}`, recurring: recurringOverride === false ? 0 : 1 };
+  }
+  return null;
+}
+
+export function importHolidaysFromExcel(buffer) {
+  const rows = parseWorkbook(buffer, { cellDates: true });
+  const result = { inserted: 0, updated: 0, errors: [] };
+
+  const insert = db.prepare('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, ?)');
+
+  const run = db.transaction(() => {
+    rows.forEach((row, index) => {
+      const rawDate = row['Ngày'] ?? row['Ngay'] ?? row['Date'] ?? pickColumn(row, ['Ngày', 'Ngay', 'Date']);
+      const name = pickColumn(row, ['Tên', 'Ten', 'Name']);
+      const recurringRaw = pickColumn(row, ['Lặp lại', 'Lap lai', 'Recurring']).toLowerCase();
+      const recurringOverride =
+        recurringRaw === '' ? undefined : ['có', 'co', 'yes', '1', 'true'].includes(recurringRaw);
+
+      if (!name) {
+        result.errors.push({ row: index + 2, reason: 'Thiếu tên' });
+        return;
+      }
+      const parsed = parseHolidayDate(rawDate, recurringOverride);
+      if (!parsed) {
+        result.errors.push({ row: index + 2, reason: 'Không đọc được ngày (dùng DD/MM hoặc DD/MM/YYYY)' });
+        return;
+      }
+
+      insert.run(parsed.date, name, parsed.recurring);
+      result.inserted += 1;
+    });
+  });
+
+  run();
+  return result;
 }

@@ -163,3 +163,42 @@ CREATE TABLE IF NOT EXISTS faq_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_faq_request_type ON faq_entries(request_type_id);
 CREATE INDEX IF NOT EXISTS idx_faq_active ON faq_entries(active);
+
+-- Giai đoạn 2 (đặc tả phát triển tiếp theo): cấu hình SLA (nhắc nhở/tự đóng) theo loại yêu
+-- cầu và/hoặc mức ưu tiên, thay cho hằng số CONFIRM_REMINDER_DAYS/CONFIRM_TIMEOUT_DAYS áp
+-- dụng chung toàn hệ thống. Xem sla.service.js để biết thứ tự tra cứu rule.
+CREATE TABLE IF NOT EXISTS sla_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_type_id INTEGER REFERENCES request_types(id) ON DELETE CASCADE,
+  priority TEXT CHECK (priority IN ('P1','P2','P3','P4')),
+  reminder_days INTEGER NOT NULL,
+  timeout_days INTEGER NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (request_type_id, priority)
+);
+CREATE INDEX IF NOT EXISTS idx_sla_rules_type ON sla_rules(request_type_id);
+
+-- Ngày nghỉ dùng để tính thời hạn theo ngày làm việc (workingDays.service.js). date lưu
+-- 'MM-DD' khi recurring=1 (lặp lại hàng năm theo dương lịch), 'YYYY-MM-DD' khi recurring=0
+-- (ngày âm lịch như Tết Nguyên đán — phải nhập tay mỗi năm).
+CREATE TABLE IF NOT EXISTS holidays (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  name TEXT NOT NULL,
+  recurring INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Giai đoạn 3: đề xuất FAQ bán tự động — nhóm các yêu cầu đã Hoàn thành có giải pháp tương
+-- tự nhau, chờ quản lý duyệt trước khi tạo thành mục faq_entries chính thức.
+CREATE TABLE IF NOT EXISTS faq_candidates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_ids TEXT NOT NULL,
+  suggested_question TEXT NOT NULL,
+  suggested_answer TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  reviewed_by INTEGER REFERENCES admin_users(id) ON DELETE SET NULL,
+  reviewed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_faq_candidates_status ON faq_candidates(status);

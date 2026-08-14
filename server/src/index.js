@@ -3,6 +3,7 @@ import { migrate } from './db/migrate.js';
 import { seed } from './db/seed.js';
 import { createApp } from './app.js';
 import { startConfirmationSweep } from './services/confirmationTimeout.service.js';
+import { startFaqCandidateSweep } from './services/faqCandidate.service.js';
 
 migrate();
 seed();
@@ -14,3 +15,4 @@ app.listen(env.port, () => {
 });
 
 startConfirmationSweep();
+startFaqCandidateSweep();

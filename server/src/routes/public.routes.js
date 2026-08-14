@@ -7,6 +7,7 @@ import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } f
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail } from '../services/email.service.js';
 import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
+import { findMostSimilarRequest } from '../services/similarity.service.js';
 import { isGeminiConfigured, env } from '../config/env.js';
 
 export const publicRouter = Router();
@@ -168,18 +169,15 @@ publicRouter.post(
       return res.status(400).json({ error: errors.join(' ') });
     }
 
-    // Phát hiện khả năng trùng lặp: cùng email người gửi + cùng loại yêu cầu, gửi trong
-    // DUPLICATE_WINDOW_DAYS gần đây, và yêu cầu trước đó chưa đóng. Chỉ đánh dấu để admin
-    // xem xét gộp — KHÔNG chặn việc gửi, tránh cản trở người gửi có vấn đề thật sự khác nhau.
-    const possibleDuplicate = db
-      .prepare(
-        `SELECT id FROM requests
-         WHERE requester_email = ? AND request_type_id = ?
-           AND status NOT IN ('done', 'done_auto', 'rejected')
-           AND created_at >= datetime('now', ?)
-         ORDER BY created_at DESC LIMIT 1`
-      )
-      .get(String(requesterEmail).trim(), Number(requestTypeId), `-${env.duplicateWindowDays} days`);
+    // Phát hiện khả năng trùng lặp theo NỘI DUNG mô tả (Giai đoạn 3) — không còn giới hạn
+    // phải cùng email/loại yêu cầu như trước. So với các yêu cầu đang "Mới tiếp nhận"/"Đang
+    // xử lý" trong DUPLICATE_WINDOW_DAYS gần đây. Chỉ đánh dấu để admin xem xét gộp — KHÔNG
+    // chặn việc gửi, tránh cản trở người gửi có vấn đề thật sự khác nhau.
+    const possibleDuplicate = findMostSimilarRequest(String(description).trim(), {
+      statuses: ['new', 'in_progress'],
+      windowDays: env.duplicateWindowDays,
+      threshold: env.duplicateSimilarityThreshold,
+    });
 
     const insert = db.prepare(`
       INSERT INTO requests

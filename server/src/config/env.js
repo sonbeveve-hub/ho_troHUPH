@@ -33,9 +33,16 @@ export const env = {
     // chờ xác nhận hay trạng thái khác) thì nhắc người phụ trách — nhắc 1 lần duy nhất.
     inprogressStaleDays: Number(process.env.INPROGRESS_STALE_DAYS) || 3,
   },
-  // Cửa sổ thời gian để phát hiện yêu cầu có thể trùng lặp: cùng email người gửi + cùng
-  // loại yêu cầu, gửi trong vòng ngần này ngày, và yêu cầu trước đó chưa đóng.
+  // Cửa sổ thời gian để phát hiện yêu cầu có thể trùng lặp (Giai đoạn 3: so theo nội dung mô
+  // tả, không còn giới hạn cùng email/loại yêu cầu) — gửi trong vòng ngần này ngày, đang ở
+  // trạng thái Mới tiếp nhận/Đang xử lý. Ngưỡng độ tương đồng 0–1 (Dice coefficient trigram,
+  // cùng thang đo với PostgreSQL pg_trgm similarity()).
   duplicateWindowDays: Number(process.env.DUPLICATE_WINDOW_DAYS) || 3,
+  duplicateSimilarityThreshold: Number(process.env.DUPLICATE_SIMILARITY_THRESHOLD) || 0.6,
+  faqCandidate: {
+    minGroupSize: Number(process.env.FAQ_CANDIDATE_MIN_GROUP_SIZE) || 3,
+    sweepIntervalHours: Number(process.env.FAQ_CANDIDATE_SWEEP_INTERVAL_HOURS) || 24,
+  },
 };
 
 export const isSmtpConfigured = () =>

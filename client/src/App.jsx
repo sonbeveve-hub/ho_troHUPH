@@ -16,6 +16,9 @@ import Assignees from './pages/admin/Assignees.jsx';
 import FaqList from './pages/admin/FaqList.jsx';
 import PublicFaq from './pages/PublicFaq.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
+import SlaRules from './pages/admin/SlaRules.jsx';
+import Holidays from './pages/admin/Holidays.jsx';
+import FaqCandidates from './pages/admin/FaqCandidates.jsx';
 
 export default function App() {
   const [admin, setAdmin] = useState(undefined); // undefined = đang kiểm tra, null = chưa đăng nhập
@@ -62,7 +65,10 @@ export default function App() {
         <Route path="staff" element={<Staff />} />
         <Route path="assignees" element={<Assignees />} />
         <Route path="faq" element={<FaqList />} />
+        <Route path="faq-candidates" element={<FaqCandidates />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="sla-rules" element={<SlaRules />} />
+        <Route path="holidays" element={<Holidays />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

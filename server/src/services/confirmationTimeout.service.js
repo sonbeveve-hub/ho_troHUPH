@@ -5,16 +5,20 @@ import {
   sendAutoClosedEmail,
   sendStaleInProgressEmail,
 } from './email.service.js';
+import { getSlaRule } from './sla.service.js';
+import { workingDaysSince } from './workingDays.service.js';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+function toDate(sqliteDateText) {
+  const d = new Date(`${sqliteDateText.replace(' ', 'T')}Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
-// Quét các yêu cầu đang "chờ xác nhận": gửi nhắc nhở lần 1 sau reminderDays, và tự động
-// đóng (done_auto) sau timeoutDays nếu người gửi vẫn không phản hồi. Chạy định kỳ từ
-// index.js — an toàn khi gọi lặp lại (idempotent nhờ confirm_reminder_sent_at + status).
+// Quét các yêu cầu đang "chờ xác nhận": gửi nhắc nhở lần 1 sau reminderDays NGÀY LÀM VIỆC,
+// và tự động đóng (done_auto) sau timeoutDays NGÀY LÀM VIỆC nếu người gửi vẫn không phản
+// hồi — số ngày lấy theo rule SLA khớp nhất (loại yêu cầu + mức ưu tiên, xem sla.service.js),
+// fallback về mặc định hệ thống nếu chưa cấu hình rule. Chạy định kỳ từ index.js — an toàn
+// khi gọi lặp lại (idempotent nhờ confirm_reminder_sent_at + status).
 export async function runConfirmationSweep() {
-  const { reminderDays, timeoutDays } = env.confirmation;
-  const now = Date.now();
-
   const pending = db
     .prepare(
       `SELECT * FROM requests WHERE status = 'resolved_pending' AND resolved_at IS NOT NULL`
@@ -22,11 +26,15 @@ export async function runConfirmationSweep() {
     .all();
 
   for (const request of pending) {
-    const resolvedAtMs = new Date(`${request.resolved_at.replace(' ', 'T')}Z`).getTime();
-    if (Number.isNaN(resolvedAtMs)) continue;
-    const daysSinceResolved = (now - resolvedAtMs) / MS_PER_DAY;
+    const resolvedAt = toDate(request.resolved_at);
+    if (!resolvedAt) continue;
+    const { reminder_days: reminderDays, timeout_days: timeoutDays } = getSlaRule(
+      request.request_type_id,
+      request.priority
+    );
+    const workingDaysPassed = workingDaysSince(resolvedAt);
 
-    if (daysSinceResolved >= timeoutDays) {
+    if (workingDaysPassed >= timeoutDays) {
       db.prepare(
         `UPDATE requests
          SET status = 'done_auto', auto_closed_at = datetime('now'), confirmed_by = 'system',
@@ -40,7 +48,7 @@ export async function runConfirmationSweep() {
       continue;
     }
 
-    if (daysSinceResolved >= reminderDays && !request.confirm_reminder_sent_at) {
+    if (workingDaysPassed >= reminderDays && !request.confirm_reminder_sent_at) {
       db.prepare(
         "UPDATE requests SET confirm_reminder_sent_at = datetime('now') WHERE id = ?"
       ).run(request.id);
@@ -57,7 +65,6 @@ export async function runConfirmationSweep() {
 // nhất — không tự động đổi trạng thái, vì yêu cầu vẫn chưa được xử lý xong.
 export async function runInProgressStaleSweep() {
   const { inprogressStaleDays } = env.confirmation;
-  const now = Date.now();
 
   const stale = db
     .prepare(
@@ -66,10 +73,9 @@ export async function runInProgressStaleSweep() {
     .all();
 
   for (const request of stale) {
-    const updatedAtMs = new Date(`${request.updated_at.replace(' ', 'T')}Z`).getTime();
-    if (Number.isNaN(updatedAtMs)) continue;
-    const daysSinceUpdate = (now - updatedAtMs) / MS_PER_DAY;
-    if (daysSinceUpdate < inprogressStaleDays) continue;
+    const updatedAt = toDate(request.updated_at);
+    if (!updatedAt) continue;
+    if (workingDaysSince(updatedAt) < inprogressStaleDays) continue;
 
     db.prepare(
       "UPDATE requests SET inprogress_reminder_sent_at = datetime('now') WHERE id = ?"

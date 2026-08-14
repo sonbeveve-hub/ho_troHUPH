@@ -33,6 +33,15 @@ const defaultRequestTypes = [
 
 const defaultProcessingTimes = ['1', '3', '5', '7', '15'];
 
+// Chỉ 4 ngày lễ dương lịch cố định — Tết Nguyên đán và các ngày âm lịch khác phải nhập tay
+// mỗi năm (xem trang "/admin/holidays"), vì ngày dương lịch tương ứng đổi theo từng năm.
+const defaultHolidays = [
+  ['01-01', 'Tết Dương lịch'],
+  ['04-30', 'Ngày Giải phóng miền Nam'],
+  ['05-01', 'Ngày Quốc tế Lao động'],
+  ['09-02', 'Ngày Quốc khánh'],
+];
+
 // Chỉ seed từng bảng khi bảng đó ĐANG RỖNG (cài đặt mới hoàn toàn). Trước đây seed() chạy
 // vô điều kiện mỗi lần server khởi động, dùng INSERT OR IGNORE theo tên — nhưng OR IGNORE chỉ
 // bỏ qua khi tên còn y nguyên, nên mỗi khi admin xoá hoặc đổi tên 1 mục mặc định, lần khởi động
@@ -41,6 +50,7 @@ export function seed() {
   const deptCount = db.prepare('SELECT COUNT(*) AS c FROM departments').get().c;
   const typeCount = db.prepare('SELECT COUNT(*) AS c FROM request_types').get().c;
   const processingTimeCount = db.prepare('SELECT COUNT(*) AS c FROM processing_times').get().c;
+  const holidayCount = db.prepare('SELECT COUNT(*) AS c FROM holidays').get().c;
 
   const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name, sort_order) VALUES (?, ?)');
   const insertType = db.prepare(
@@ -49,6 +59,7 @@ export function seed() {
   const insertProcessingTime = db.prepare(
     'INSERT OR IGNORE INTO processing_times (name, sort_order) VALUES (?, ?)'
   );
+  const insertHoliday = db.prepare('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, 1)');
 
   const seedAll = db.transaction(() => {
     if (deptCount === 0) {
@@ -61,6 +72,9 @@ export function seed() {
     }
     if (processingTimeCount === 0) {
       defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
+    }
+    if (holidayCount === 0) {
+      defaultHolidays.forEach(([date, name]) => insertHoliday.run(date, name));
     }
   });
 
