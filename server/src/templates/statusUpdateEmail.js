@@ -1,5 +1,5 @@
 import { escapeHtml } from '../utils/escapeHtml.js';
-import { requestEmailSubject, trackingLinkHtml } from './emailShared.js';
+import { requestEmailSubject, trackingCta, trackingLinkFallback, EMAIL_FOOTER, emailLayout } from './emailShared.js';
 
 const STATUS_LABELS = {
   new: 'Mới tiếp nhận',
@@ -15,19 +15,19 @@ export function statusUpdateEmail({ request, newStatus, note }) {
   const statusLabel = STATUS_LABELS[newStatus] || newStatus;
   const subject = requestEmailSubject(request);
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Kính gửi thầy/cô <strong>${escapeHtml(request.requester_name)}</strong>,</p>
-      <p>Yêu cầu hỗ trợ <strong>${escapeHtml(request.request_code)}</strong> của thầy/cô vừa được cập nhật:</p>
-      <table style="border-collapse: collapse; margin: 12px 0;">
-        <tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Trạng thái mới</td><td><strong>${escapeHtml(statusLabel)}</strong></td></tr>
-        ${note ? `<tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Ghi chú</td><td>${escapeHtml(note)}</td></tr>` : ''}
-      </table>
-      ${trackingLinkHtml(request)}
-      <p>Trân trọng.<br/>TTTH - Phòng KT&amp;BĐCL.</p>
-      <p style="color:#6b7280; font-size:12px;">Đây là email tự động, vui lòng không trả lời trực tiếp email này.</p>
-    </div>
+  const bodyHtml = `
+    <p>Kính gửi thầy/cô <strong>${escapeHtml(request.requester_name)}</strong>,</p>
+    <p>Yêu cầu hỗ trợ <strong>${escapeHtml(request.request_code)}</strong> của thầy/cô vừa được cập nhật:</p>
+    <table style="border-collapse: collapse; margin: 12px 0;">
+      <tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Trạng thái mới</td><td><strong>${escapeHtml(statusLabel)}</strong></td></tr>
+      ${note ? `<tr><td style="padding: 4px 12px 4px 0; color:#6b7280;">Ghi chú</td><td>${escapeHtml(note)}</td></tr>` : ''}
+    </table>
+    ${trackingCta(request, 'Xem chi tiết yêu cầu')}
+    ${trackingLinkFallback(request)}
+    ${EMAIL_FOOTER}
   `;
+
+  const html = emailLayout({ eyebrow: 'Cập nhật trạng thái', title: `Cập nhật: ${statusLabel}`, bodyHtml });
 
   return { subject, html };
 }
