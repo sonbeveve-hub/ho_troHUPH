@@ -9,13 +9,19 @@ import { StatusBadge } from '../../components/StatusBadge.jsx';
 const STATUS_LABEL = {
   new: 'Mới tiếp nhận',
   in_progress: 'Đang xử lý',
+  resolved_pending: 'Chờ xác nhận',
+  reopened: 'Mở lại',
   done: 'Hoàn thành',
+  done_auto: 'Tự động đóng',
   rejected: 'Từ chối',
 };
 const STATUS_DOT = {
   new: 'bg-blue-500',
   in_progress: 'bg-amber-500',
+  resolved_pending: 'bg-yellow-500',
+  reopened: 'bg-orange-500',
   done: 'bg-emerald-500',
+  done_auto: 'bg-slate-400',
   rejected: 'bg-red-500',
 };
 
@@ -24,6 +30,7 @@ export default function Stats() {
   const [timeseries, setTimeseries] = useState([]);
   const [byAssignee, setByAssignee] = useState([]);
   const [aiStats, setAiStats] = useState(null);
+  const [confirmationStats, setConfirmationStats] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -31,6 +38,7 @@ export default function Stats() {
     api.get('/admin/stats/timeseries?days=30').then(setTimeseries).catch(() => {});
     api.get('/admin/stats/by-assignee').then(setByAssignee).catch(() => {});
     api.get('/admin/stats/ai').then(setAiStats).catch(() => {});
+    api.get('/admin/stats/confirmation').then(setConfirmationStats).catch(() => {});
   }, []);
 
   if (error) {
@@ -91,9 +99,72 @@ export default function Stats() {
         </div>
       </div>
 
+      {confirmationStats && <ConfirmationStats stats={confirmationStats} />}
+
       {aiStats && <AiFeedbackStats stats={aiStats} />}
 
       <AssigneeProgress rows={byAssignee} />
+    </div>
+  );
+}
+
+function ConfirmationStats({ stats }) {
+  const {
+    pendingCount,
+    reopenedCount,
+    confirmedCount,
+    delegateConfirmedCount,
+    autoClosedCount,
+    escalatedCount,
+    ratingCount,
+    avgRating,
+    avgConfirmWaitDays,
+    ratingBreakdown,
+  } = stats;
+  const ratingMap = Object.fromEntries(ratingBreakdown.map((r) => [r.rating, r.count]));
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mt-5">
+      <h2 className="font-semibold text-slate-900 mb-4">✅ Xác nhận hoàn thành &amp; Hài lòng dịch vụ (CSAT)</h2>
+
+      <div className="grid sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 gap-3">
+          <MiniStat label="Đang chờ xác nhận" value={pendingCount} dotClass="bg-yellow-500" />
+          <MiniStat label="Đã mở lại (bị từ chối)" value={reopenedCount} dotClass="bg-orange-500" />
+          <MiniStat label="Người gửi tự xác nhận" value={confirmedCount} dotClass="bg-emerald-500" />
+          <MiniStat label="Admin xác nhận thay" value={delegateConfirmedCount} />
+          <MiniStat label="Tự động đóng (không phản hồi)" value={autoClosedCount} dotClass="bg-slate-400" />
+          <MiniStat label="Cần chú ý (bị từ chối ≥ 2 lần)" value={escalatedCount} dotClass="bg-red-500" />
+          <MiniStat
+            label="TG chờ xác nhận TB"
+            value={avgConfirmWaitDays != null ? `${avgConfirmWaitDays.toFixed(1)} ngày` : '—'}
+          />
+          <MiniStat
+            label="Điểm hài lòng TB (CSAT)"
+            value={avgRating ? `${avgRating.toFixed(1)} ★` : '—'}
+            sub={`${ratingCount} lượt đánh giá`}
+          />
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-400 mb-2">Phân bố đánh giá CSAT</p>
+          <div className="space-y-1.5">
+            {[5, 4, 3, 2, 1].map((star) => {
+              const count = ratingMap[star] || 0;
+              const pct = ratingCount > 0 ? (count / ratingCount) * 100 : 0;
+              return (
+                <div key={star} className="flex items-center gap-2 text-xs">
+                  <span className="w-8 text-slate-500 shrink-0">{star} ★</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -217,6 +288,8 @@ function AssigneeProgress({ rows }) {
                 <th className="py-2 px-3 font-medium text-right">Tổng</th>
                 <th className="py-2 px-3 font-medium text-right">Mới</th>
                 <th className="py-2 px-3 font-medium text-right">Đang xử lý</th>
+                <th className="py-2 px-3 font-medium text-right">Chờ xác nhận</th>
+                <th className="py-2 px-3 font-medium text-right">Mở lại</th>
                 <th className="py-2 px-3 font-medium text-right">Hoàn thành</th>
                 <th className="py-2 pl-3 font-medium text-right">Từ chối</th>
               </tr>
@@ -231,6 +304,8 @@ function AssigneeProgress({ rows }) {
                   <td className="py-2 px-3 text-right font-medium text-slate-900">{r.total}</td>
                   <td className="py-2 px-3 text-right text-slate-500">{r.new_count}</td>
                   <td className="py-2 px-3 text-right text-slate-500">{r.in_progress_count}</td>
+                  <td className="py-2 px-3 text-right text-slate-500">{r.resolved_pending_count}</td>
+                  <td className="py-2 px-3 text-right text-slate-500">{r.reopened_count}</td>
                   <td className="py-2 px-3 text-right text-slate-500">{r.done_count}</td>
                   <td className="py-2 pl-3 text-right text-slate-500">{r.rejected_count}</td>
                 </tr>

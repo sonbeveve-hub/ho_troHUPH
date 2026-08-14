@@ -6,7 +6,10 @@ import { StatusBadge, ProcessingTimeBadge } from '../../components/StatusBadge.j
 const STATUS_OPTIONS = [
   { value: 'new', label: 'Mới tiếp nhận' },
   { value: 'in_progress', label: 'Đang xử lý' },
+  { value: 'resolved_pending', label: 'Đã xử lý - Chờ xác nhận' },
+  { value: 'reopened', label: 'Mở lại' },
   { value: 'done', label: 'Hoàn thành' },
+  { value: 'done_auto', label: 'Đã đóng (tự động)' },
   { value: 'rejected', label: 'Từ chối' },
 ];
 
@@ -65,8 +68,15 @@ export default function RequestDetail() {
     });
   }, [request?.id]);
 
+  const [confirmingOnBehalf, setConfirmingOnBehalf] = useState(false);
+  const [confirmOnBehalfError, setConfirmOnBehalfError] = useState('');
+
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (status === 'resolved_pending' && !note.trim()) {
+      setMessage('Vui lòng mô tả giải pháp/nguyên nhân khi đánh dấu đã xử lý.');
+      return;
+    }
     setSaving(true);
     setMessage('');
     try {
@@ -74,8 +84,29 @@ export default function RequestDetail() {
       setMessage(res.emailSent ? 'Đã cập nhật và gửi email cho người yêu cầu.' : 'Đã cập nhật (email chưa được gửi — kiểm tra cấu hình SMTP).');
       setNote('');
       load();
+    } catch (err) {
+      setMessage(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmOnBehalf = async () => {
+    const reason = window.prompt('Vui lòng ghi lý do xác nhận thay (bắt buộc):');
+    if (reason === null) return; // đã huỷ
+    if (!reason.trim()) {
+      setConfirmOnBehalfError('Vui lòng ghi rõ lý do xác nhận thay.');
+      return;
+    }
+    setConfirmingOnBehalf(true);
+    setConfirmOnBehalfError('');
+    try {
+      await api.patch(`/admin/requests/${id}/confirm-on-behalf`, { reason: reason.trim() });
+      load();
+    } catch (err) {
+      setConfirmOnBehalfError(err.message);
+    } finally {
+      setConfirmingOnBehalf(false);
     }
   };
 
@@ -294,10 +325,24 @@ export default function RequestDetail() {
                 <dt className="text-slate-400">Xác nhận từ người gửi</dt>
                 <dd className={request.requester_confirmed_at ? 'text-emerald-700' : 'text-slate-400'}>
                   {request.requester_confirmed_at
-                    ? `✓ Đã xác nhận lúc ${new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}`
+                    ? `✓ Đã xác nhận lúc ${new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}${request.confirmed_by === 'delegate' ? ' (admin xác nhận thay)' : ''}`
                     : 'Chưa xác nhận'}
+                  {request.csat_rating ? (
+                    <span className="ml-2 text-amber-600">
+                      {'★'.repeat(request.csat_rating)}{'☆'.repeat(5 - request.csat_rating)}
+                    </span>
+                  ) : null}
                 </dd>
               </div>
+              {request.reject_count > 0 && (
+                <div className="col-span-2">
+                  <dt className="text-slate-400">Số lần bị từ chối</dt>
+                  <dd className={request.escalated_at ? 'text-red-600 font-semibold' : 'text-orange-600'}>
+                    {request.reject_count} lần
+                    {request.escalated_at && ' ⚠ Cần chú ý — đã từ chối nhiều lần, nên ưu tiên xử lý'}
+                  </dd>
+                </div>
+              )}
             </dl>
 
             <div className="mt-4">
@@ -370,7 +415,11 @@ export default function RequestDetail() {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
-          placeholder="Ghi chú gửi kèm cho người yêu cầu (tuỳ chọn)..."
+          placeholder={
+            status === 'resolved_pending'
+              ? 'Mô tả giải pháp/nguyên nhân (bắt buộc) — sẽ gửi kèm email yêu cầu người gửi xác nhận...'
+              : 'Ghi chú gửi kèm cho người yêu cầu (tuỳ chọn)...'
+          }
           className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         />
         {message && (
@@ -378,13 +427,29 @@ export default function RequestDetail() {
             {message}
           </div>
         )}
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
-        >
-          {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
+          >
+            {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
+          </button>
+          {request.status === 'resolved_pending' && (
+            <button
+              type="button"
+              onClick={handleConfirmOnBehalf}
+              disabled={confirmingOnBehalf}
+              className="rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-60"
+              title="Dùng khi người gửi vắng mặt/không thể tự xác nhận — chỉ khả dụng sau khi đã gửi nhắc nhở, và cần ghi rõ lý do"
+            >
+              {confirmingOnBehalf ? 'Đang xác nhận...' : 'Xác nhận thay người gửi'}
+            </button>
+          )}
+        </div>
+        {confirmOnBehalfError && (
+          <p className="text-sm text-red-600">{confirmOnBehalfError}</p>
+        )}
       </form>
 
       <form onSubmit={handleAssign} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">

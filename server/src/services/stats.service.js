@@ -35,13 +35,61 @@ export function getByAssignee() {
          COUNT(*) AS total,
          SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new_count,
          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress_count,
-         SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done_count,
+         SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS resolved_pending_count,
+         SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
+         SUM(CASE WHEN status IN ('done', 'done_auto') THEN 1 ELSE 0 END) AS done_count,
          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count
        FROM requests
        GROUP BY COALESCE(assignee_email, '__unassigned__')
        ORDER BY (assignee_email IS NULL), total DESC`
     )
     .all();
+}
+
+// Thống kê giai đoạn xác nhận hoàn thành (Resolution & Closure): CSAT, tỷ lệ tự đóng do
+// không phản hồi, số lượt bị từ chối/mở lại, và thời gian chờ xác nhận trung bình.
+export function getConfirmationStats() {
+  const summary = db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS pending_count,
+         SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
+         SUM(CASE WHEN status = 'done' AND confirmed_by = 'requester' THEN 1 ELSE 0 END) AS confirmed_count,
+         SUM(CASE WHEN status = 'done' AND confirmed_by = 'delegate' THEN 1 ELSE 0 END) AS delegate_confirmed_count,
+         SUM(CASE WHEN status = 'done_auto' THEN 1 ELSE 0 END) AS auto_closed_count,
+         SUM(CASE WHEN escalated_at IS NOT NULL THEN 1 ELSE 0 END) AS escalated_count,
+         SUM(CASE WHEN csat_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
+         AVG(csat_rating) AS avg_rating,
+         AVG(CASE
+           WHEN requester_confirmed_at IS NOT NULL AND resolved_at IS NOT NULL
+           THEN (julianday(requester_confirmed_at) - julianday(resolved_at))
+         END) AS avg_confirm_wait_days
+       FROM requests`
+    )
+    .get();
+
+  const ratingBreakdown = db
+    .prepare(
+      `SELECT csat_rating AS rating, COUNT(*) AS count
+       FROM requests
+       WHERE csat_rating IS NOT NULL
+       GROUP BY csat_rating
+       ORDER BY csat_rating DESC`
+    )
+    .all();
+
+  return {
+    pendingCount: summary.pending_count || 0,
+    reopenedCount: summary.reopened_count || 0,
+    confirmedCount: summary.confirmed_count || 0,
+    delegateConfirmedCount: summary.delegate_confirmed_count || 0,
+    autoClosedCount: summary.auto_closed_count || 0,
+    escalatedCount: summary.escalated_count || 0,
+    ratingCount: summary.rating_count || 0,
+    avgRating: summary.avg_rating || null,
+    avgConfirmWaitDays: summary.avg_confirm_wait_days || null,
+    ratingBreakdown,
+  };
 }
 
 export function getAiStats() {

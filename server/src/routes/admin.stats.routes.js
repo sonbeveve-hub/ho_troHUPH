@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
-import { getSummary, getTimeseries, getByAssignee, getAiStats } from '../services/stats.service.js';
+import {
+  getSummary,
+  getTimeseries,
+  getByAssignee,
+  getAiStats,
+  getConfirmationStats,
+} from '../services/stats.service.js';
 
 export const adminStatsRouter = Router();
 adminStatsRouter.use(requireAdmin);
@@ -24,6 +30,13 @@ adminStatsRouter.get(
   '/ai',
   asyncHandler(async (req, res) => {
     res.json(getAiStats());
+  })
+);
+
+adminStatsRouter.get(
+  '/confirmation',
+  asyncHandler(async (req, res) => {
+    res.json(getConfirmationStats());
   })
 );
 

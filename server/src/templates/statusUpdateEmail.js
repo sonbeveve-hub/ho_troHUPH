@@ -4,7 +4,10 @@ import { requestEmailSubject, trackingLinkHtml } from './emailShared.js';
 const STATUS_LABELS = {
   new: 'Mới tiếp nhận',
   in_progress: 'Đang xử lý',
+  resolved_pending: 'Đã xử lý - Chờ xác nhận',
+  reopened: 'Mở lại',
   done: 'Hoàn thành',
+  done_auto: 'Đã đóng (tự động)',
   rejected: 'Từ chối',
 };
 

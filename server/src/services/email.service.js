@@ -4,6 +4,11 @@ import { db } from '../db/index.js';
 import { statusUpdateEmail } from '../templates/statusUpdateEmail.js';
 import { submissionConfirmationEmail } from '../templates/submissionConfirmationEmail.js';
 import { assignmentEmailForRequester } from '../templates/assignmentEmail.js';
+import { resolvedPendingConfirmationEmail } from '../templates/resolvedPendingConfirmationEmail.js';
+import { confirmReminderEmail } from '../templates/confirmReminderEmail.js';
+import { autoClosedEmail } from '../templates/autoClosedEmail.js';
+import { reopenedNotificationEmail } from '../templates/reopenedNotificationEmail.js';
+import { staleInProgressEmail } from '../templates/staleInProgressEmail.js';
 
 // Message-ID gốc dùng chung cho mọi email của cùng 1 yêu cầu (kèm subject giống nhau ở
 // các template), để mail client (Outlook, Apple Mail...) gom chúng vào chung 1 luồng hội thoại
@@ -118,4 +123,37 @@ export async function sendAssignmentEmails(request) {
     html,
   });
   return { sent: result.sent };
+}
+
+export async function sendResolvedPendingEmail(request, note) {
+  const { subject, html } = resolvedPendingConfirmationEmail({ request, note });
+  return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+}
+
+export async function sendConfirmReminderEmail(request) {
+  const { subject, html } = confirmReminderEmail({ request });
+  return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+}
+
+export async function sendAutoClosedEmail(request) {
+  const { subject, html } = autoClosedEmail({ request });
+  return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+}
+
+// Gửi cho người phụ trách (không phải người gửi yêu cầu) khi yêu cầu bị từ chối và mở lại.
+// Nếu chưa có người phụ trách, gửi cho CC mặc định (NOTIFY_CC_EMAIL) để không bị rơi mất thông báo.
+export async function sendReopenedNotificationEmail(request, reason, escalated) {
+  const to = request.assignee_email || env.notifyCcEmail;
+  if (!to) return { sent: false, reason: 'no_recipient' };
+  const { subject, html } = reopenedNotificationEmail({ request, reason, escalated });
+  return dispatchEmail({ requestId: request.id, to, subject, html });
+}
+
+// Gửi cho người phụ trách (hoặc CC mặc định nếu chưa phân công) khi yêu cầu bị "treo" quá
+// lâu ở trạng thái "Đang xử lý".
+export async function sendStaleInProgressEmail(request, staleDays) {
+  const to = request.assignee_email || env.notifyCcEmail;
+  if (!to) return { sent: false, reason: 'no_recipient' };
+  const { subject, html } = staleInProgressEmail({ request, staleDays });
+  return dispatchEmail({ requestId: request.id, to, subject, html });
 }

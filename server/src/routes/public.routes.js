@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
 import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
-import { sendSubmissionConfirmationEmail } from '../services/email.service.js';
+import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail } from '../services/email.service.js';
 import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
 import { isGeminiConfigured } from '../config/env.js';
 
@@ -199,6 +199,7 @@ publicRouter.post(
 const TRACK_SELECT_BASE = `
   SELECT requests.id, requests.request_code, requests.requester_name, requests.description,
          requests.status, requests.assignee_name, requests.requester_confirmed_at,
+         requests.admin_notes, requests.csat_rating, requests.reject_count,
          requests.created_at, requests.updated_at,
          departments.name AS department_name, request_types.name AS request_type_name,
          processing_times.name AS processing_time_name
@@ -256,18 +257,69 @@ publicRouter.post(
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
     const request = db
-      .prepare('SELECT id, requester_confirmed_at FROM requests WHERE request_code = ?')
+      .prepare('SELECT id, status, requester_confirmed_at FROM requests WHERE request_code = ?')
       .get(req.params.code.trim().toUpperCase());
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
+    if (request.status !== 'resolved_pending') {
+      return res.status(400).json({ error: 'Yêu cầu này chưa ở trạng thái chờ xác nhận.' });
+    }
+
+    const rating = Number(req.body?.rating);
+    const hasRating = Number.isInteger(rating) && rating >= 1 && rating <= 5;
+
     if (!request.requester_confirmed_at) {
       db.prepare(
-        "UPDATE requests SET requester_confirmed_at = datetime('now'), status = 'done', updated_at = datetime('now') WHERE id = ?"
-      ).run(request.id);
+        `UPDATE requests
+         SET requester_confirmed_at = datetime('now'), status = 'done', confirmed_by = 'requester',
+             csat_rating = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      ).run(hasRating ? rating : null, request.id);
       db.prepare(
         "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã được hỗ trợ')"
       ).run(request.id);
     }
+
+    const updated = db
+      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
+      .get(req.params.code.trim().toUpperCase());
+    res.json({ ...updated, history: getRequestHistory(request.id) });
+  })
+);
+
+publicRouter.post(
+  '/track/:code/reject',
+  trackRequestLimiter,
+  asyncHandler(async (req, res) => {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (reason.length < 3) {
+      return res.status(400).json({ error: 'Vui lòng cho biết lý do chưa hài lòng.' });
+    }
+
+    const request = db
+      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
+      .get(req.params.code.trim().toUpperCase());
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+    if (request.status !== 'resolved_pending') {
+      return res.status(400).json({ error: 'Yêu cầu này chưa ở trạng thái chờ xác nhận.' });
+    }
+
+    const nextRejectCount = request.reject_count + 1;
+    const escalate = nextRejectCount >= 2;
+
+    db.prepare(
+      `UPDATE requests
+       SET status = 'reopened', reject_count = ?, escalated_at = ${escalate ? "COALESCE(escalated_at, datetime('now'))" : 'escalated_at'},
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(nextRejectCount, request.id);
+
+    db.prepare(
+      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'reopened', ?)"
+    ).run(request.id, reason);
+
+    const updatedForEmail = db.prepare('SELECT * FROM requests WHERE id = ?').get(request.id);
+    await sendReopenedNotificationEmail(updatedForEmail, reason, escalate);
 
     const updated = db
       .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)

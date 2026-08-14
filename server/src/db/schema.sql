@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS requests (
   description TEXT NOT NULL,
   requester_email TEXT NOT NULL,
   email_source TEXT NOT NULL CHECK (email_source IN ('auto','picked','manual')),
-  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','done','rejected')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','resolved_pending','reopened','done','done_auto','rejected')),
   admin_notes TEXT,
   ip_address TEXT,
   assignee_name TEXT,
@@ -73,6 +73,14 @@ CREATE TABLE IF NOT EXISTS requests (
   ai_alternative_suggestion TEXT,
   ai_resolved INTEGER,
   ai_rating INTEGER,
+  resolved_at TEXT,
+  reject_count INTEGER NOT NULL DEFAULT 0,
+  confirm_reminder_sent_at TEXT,
+  inprogress_reminder_sent_at TEXT,
+  csat_rating INTEGER,
+  confirmed_by TEXT,
+  escalated_at TEXT,
+  auto_closed_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

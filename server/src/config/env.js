@@ -23,6 +23,16 @@ export const env = {
     apiKey: process.env.GEMINI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   },
+  confirmation: {
+    // Số ngày kể từ khi IT đánh dấu "đã xử lý" mà người gửi chưa xác nhận thì gửi nhắc nhở,
+    // và tổng số ngày (kể từ cùng mốc) trước khi hệ thống tự động đóng nếu vẫn im lặng.
+    reminderDays: Number(process.env.CONFIRM_REMINDER_DAYS) || 2,
+    timeoutDays: Number(process.env.CONFIRM_TIMEOUT_DAYS) || 5,
+    sweepIntervalMinutes: Number(process.env.CONFIRM_SWEEP_INTERVAL_MINUTES) || 60,
+    // Số ngày kể từ lần cập nhật gần nhất mà yêu cầu vẫn "Đang xử lý" (chưa chuyển sang
+    // chờ xác nhận hay trạng thái khác) thì nhắc người phụ trách — nhắc 1 lần duy nhất.
+    inprogressStaleDays: Number(process.env.INPROGRESS_STALE_DAYS) || 3,
+  },
 };
 
 export const isSmtpConfigured = () =>

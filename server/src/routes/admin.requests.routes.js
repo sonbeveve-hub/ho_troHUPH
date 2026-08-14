@@ -1,16 +1,29 @@
 import { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import { env } from '../config/env.js';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
-import { sendStatusUpdateEmail, sendAssignmentEmails } from '../services/email.service.js';
+import {
+  sendStatusUpdateEmail,
+  sendAssignmentEmails,
+  sendResolvedPendingEmail,
+} from '../services/email.service.js';
 import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 
 export const adminRequestsRouter = Router();
 adminRequestsRouter.use(requireAdmin);
 
-const VALID_STATUSES = new Set(['new', 'in_progress', 'done', 'rejected']);
+const VALID_STATUSES = new Set([
+  'new',
+  'in_progress',
+  'resolved_pending',
+  'reopened',
+  'done',
+  'done_auto',
+  'rejected',
+]);
 const PAGE_SIZE = 20;
 
 const LIST_SELECT = `
@@ -123,22 +136,89 @@ adminRequestsRouter.patch(
     if (!VALID_STATUSES.has(status)) {
       return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
     }
+    if (status === 'resolved_pending' && (!note || !String(note).trim())) {
+      return res.status(400).json({
+        error: 'Vui lòng mô tả giải pháp/nguyên nhân khi đánh dấu đã xử lý.',
+      });
+    }
 
     const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
-    db.prepare(
-      "UPDATE requests SET status = ?, admin_notes = ?, updated_at = datetime('now') WHERE id = ?"
-    ).run(status, note || null, req.params.id);
+    if (status === 'resolved_pending') {
+      db.prepare(
+        `UPDATE requests
+         SET status = ?, admin_notes = ?, resolved_at = datetime('now'),
+             confirm_reminder_sent_at = NULL, updated_at = datetime('now')
+         WHERE id = ?`
+      ).run(status, note || null, req.params.id);
+    } else if (status === 'in_progress') {
+      db.prepare(
+        `UPDATE requests
+         SET status = ?, admin_notes = ?, inprogress_reminder_sent_at = NULL, updated_at = datetime('now')
+         WHERE id = ?`
+      ).run(status, note || null, req.params.id);
+    } else {
+      db.prepare(
+        "UPDATE requests SET status = ?, admin_notes = ?, updated_at = datetime('now') WHERE id = ?"
+      ).run(status, note || null, req.params.id);
+    }
 
     db.prepare(
       'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
     ).run(req.params.id, status, note || null);
 
     const updated = { ...request, status };
-    const emailResult = await sendStatusUpdateEmail(updated, status, note);
+    const emailResult =
+      status === 'resolved_pending'
+        ? await sendResolvedPendingEmail(updated, note)
+        : await sendStatusUpdateEmail(updated, status, note);
 
     res.json({ ok: true, emailSent: emailResult.sent });
+  })
+);
+
+// Xác nhận thay người gửi (khi họ vắng mặt/không phản hồi được) — chỉ admin đã đăng nhập
+// mới gọi được endpoint này. Chỉ áp dụng khi yêu cầu đang chờ xác nhận VÀ đã qua thời hạn
+// nhắc nhở (cho người gửi cơ hội tự phản hồi trước), và bắt buộc admin ghi rõ lý do.
+adminRequestsRouter.patch(
+  '/:id/confirm-on-behalf',
+  asyncHandler(async (req, res) => {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (reason.length < 3) {
+      return res.status(400).json({ error: 'Vui lòng ghi rõ lý do xác nhận thay.' });
+    }
+
+    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+    if (request.status !== 'resolved_pending') {
+      return res.status(400).json({ error: 'Yêu cầu này không ở trạng thái chờ xác nhận.' });
+    }
+    if (!request.resolved_at) {
+      return res.status(400).json({ error: 'Yêu cầu chưa có mốc thời gian xử lý hợp lệ.' });
+    }
+    const daysSinceResolved = (Date.now() - new Date(`${request.resolved_at.replace(' ', 'T')}Z`).getTime()) / 86400000;
+    if (daysSinceResolved < env.confirmation.reminderDays) {
+      return res.status(400).json({
+        error: `Chỉ có thể xác nhận thay sau ${env.confirmation.reminderDays} ngày kể từ khi đánh dấu đã xử lý, để người gửi có cơ hội tự phản hồi trước.`,
+      });
+    }
+
+    const adminUsername = req.session.adminUsername;
+    const note = `Xác nhận thay bởi quản trị viên (${adminUsername}) — lý do: ${reason}`;
+
+    db.prepare(
+      `UPDATE requests
+       SET status = 'done', requester_confirmed_at = datetime('now'), confirmed_by = 'delegate',
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(req.params.id);
+
+    db.prepare(
+      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', ?)"
+    ).run(req.params.id, note);
+
+    res.json({ ok: true });
   })
 );
 
@@ -221,7 +301,7 @@ adminRequestsRouter.patch(
     db.prepare(
       `UPDATE requests
        SET assignee_name = ?, assignee_email = ?, assignee_phone = ?, assigned_at = datetime('now'),
-           status = ?, updated_at = datetime('now')
+           status = ?, inprogress_reminder_sent_at = NULL, updated_at = datetime('now')
        WHERE id = ?`
     ).run(
       trimmedName,

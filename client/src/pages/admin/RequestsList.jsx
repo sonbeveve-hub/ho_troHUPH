@@ -7,7 +7,10 @@ const TABS = [
   { value: '', label: 'Tất cả' },
   { value: 'new', label: 'Mới tiếp nhận' },
   { value: 'in_progress', label: 'Đang xử lý' },
+  { value: 'resolved_pending', label: 'Chờ xác nhận' },
+  { value: 'reopened', label: 'Mở lại' },
   { value: 'done', label: 'Hoàn thành' },
+  { value: 'done_auto', label: 'Tự động đóng' },
   { value: 'rejected', label: 'Từ chối' },
 ];
 
@@ -53,7 +56,7 @@ export default function RequestsList() {
         <h1 className="text-2xl font-bold text-slate-900">Yêu cầu hỗ trợ</h1>
       </div>
 
-      <div className="flex items-center gap-1 mb-4 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-1 mb-4 border-b border-slate-200">
         {TABS.map((t) => (
           <button
             key={t.value}
