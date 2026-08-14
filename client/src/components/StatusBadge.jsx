@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFlag } from '@fortawesome/free-solid-svg-icons';
+
 const STATUS_META = {
   new: { label: 'Mới tiếp nhận', className: 'bg-blue-50 text-blue-700' },
   in_progress: { label: 'Đang xử lý', className: 'bg-amber-50 text-amber-700' },
@@ -38,7 +41,8 @@ export function PriorityBadge({ priority }) {
   if (!meta) return null;
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}>
-      ⚑ {meta.label}
+      <FontAwesomeIcon icon={faFlag} className="mr-1" />
+      {meta.label}
     </span>
   );
 }

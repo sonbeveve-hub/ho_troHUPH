@@ -8,6 +8,7 @@ import {
   sendStatusUpdateEmail,
   sendAssignmentEmails,
   sendResolvedPendingEmail,
+  sendCsatRequestEmail,
 } from '../services/email.service.js';
 import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
@@ -205,12 +206,18 @@ adminRequestsRouter.patch(
     });
 
     const updated = { ...request, status };
+    // Chỉ gửi email khi trạng thái THỰC SỰ thay đổi — tránh gửi trùng email khi admin bấm
+    // "Lưu & gửi email" với trạng thái không đổi (ví dụ: vừa phân công xong — đã tự chuyển
+    // "Đang xử lý" và gửi email riêng — rồi lại bấm lưu form trạng thái cũng đang là "Đang xử
+    // lý"). Ghi chú/audit vẫn được lưu bình thường, chỉ bỏ qua bước gửi email.
     const emailResult =
-      status === 'resolved_pending'
-        ? await sendResolvedPendingEmail(updated, note)
-        : await sendStatusUpdateEmail(updated, status, note);
+      status === request.status
+        ? { sent: false, reason: 'unchanged' }
+        : status === 'resolved_pending'
+          ? await sendResolvedPendingEmail(updated, note)
+          : await sendStatusUpdateEmail(updated, status, note);
 
-    res.json({ ok: true, emailSent: emailResult.sent });
+    res.json({ ok: true, emailSent: emailResult.sent, emailReason: emailResult.reason });
   })
 );
 
@@ -265,6 +272,9 @@ adminRequestsRouter.patch(
       oldValue: request.status,
       newValue: 'done',
     });
+
+    // Xác nhận thay không có cơ hội để người gửi tự chọn sao — mời đánh giá riêng qua email.
+    await sendCsatRequestEmail(request);
 
     res.json({ ok: true });
   })

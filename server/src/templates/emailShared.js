@@ -19,6 +19,19 @@ export function confirmUrl(request) {
   return `${trackingUrl(request)}?confirm=1`;
 }
 
+// Link "Chưa được khắc phục": không thể tự xác nhận 1 chạm như confirmUrl() vì cần người
+// dùng nhập lý do — trang tra cứu đọc query ?action=reject để tự MỞ SẴN form nhập lý do
+// (không tự gửi), giúp người dùng đỡ phải tìm nút trên trang.
+export function rejectFormUrl(request) {
+  return `${trackingUrl(request)}?action=reject`;
+}
+
+// Link đánh giá hài lòng theo từng mức sao — mỗi mức 1 link riêng (?rate=N), trang tra cứu
+// tự gửi đánh giá ngay khi tải xong, cùng cơ chế "1 chạm" với confirmUrl().
+export function rateUrl(request, stars) {
+  return `${trackingUrl(request)}?rate=${stars}`;
+}
+
 // 'default' (xanh thương hiệu) cho các email thông thường, 'urgent' (đỏ) để làm nổi bật các
 // email cần chú ý gấp (ví dụ yêu cầu bị từ chối nhiều lần). Không dùng ảnh PNG dựng sẵn cho
 // phần hero như cách làm thủ công trong Gmail Templates — vì đây là email HTML thật gửi qua
@@ -82,6 +95,38 @@ export function trackingLinkFallback(request) {
 
 export function confirmLinkFallback(request) {
   return linkFallback(confirmUrl(request));
+}
+
+// Cặp nút "Đã khắc phục" (xanh, đặc — xác nhận 1 chạm) / "Chưa khắc phục" (đỏ, viền — mở sẵn
+// form nhập lý do trên trang tra cứu) đặt cạnh nhau bằng 1 bảng 2 cột, tương thích Outlook.
+export function confirmRejectButtons(request) {
+  const c = TONE.default.solid;
+  const u = TONE.urgent.solid;
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin: 22px auto;">
+      <tr>
+        <td align="center" bgcolor="${c}" style="border-radius:10px; background-color:${c};">
+          <a href="${escapeHtml(confirmUrl(request))}" target="_blank" style="display:inline-block; padding:13px 22px; font-family:Arial,sans-serif; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:10px;">✅ Đã được khắc phục</a>
+        </td>
+        <td style="width:12px;"></td>
+        <td align="center" bgcolor="#ffffff" style="border-radius:10px; border:2px solid ${u};">
+          <a href="${escapeHtml(rejectFormUrl(request))}" target="_blank" style="display:inline-block; padding:11px 20px; font-family:Arial,sans-serif; font-size:14px; font-weight:700; color:${u}; text-decoration:none; border-radius:10px;">❌ Chưa được khắc phục</a>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+// Dãy 5 mức đánh giá, mỗi dòng là 1 link riêng (?rate=N) — bấm vào là gửi đánh giá ngay (cùng
+// cơ chế "1 chạm" với nút xác nhận), không cần vào trang chọn sao thủ công.
+export function csatStarsBlock(request) {
+  const rows = [1, 2, 3, 4, 5]
+    .map(
+      (n) =>
+        `<tr><td align="center" style="padding-bottom:6px;"><a href="${escapeHtml(rateUrl(request, n))}" target="_blank" style="display:inline-block; text-decoration:none; font-size:24px; line-height:1.3;">${'⭐'.repeat(n)}${'☆'.repeat(5 - n)}</a></td></tr>`
+    )
+    .join('');
+  return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin: 18px auto;">${rows}</table>`;
 }
 
 export const EMAIL_FOOTER = `

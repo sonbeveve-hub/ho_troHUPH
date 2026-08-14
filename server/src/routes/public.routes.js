@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { lookupStaff } from '../services/staffLookup.service.js';
 import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
-import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail } from '../services/email.service.js';
+import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail, sendCsatRequestEmail } from '../services/email.service.js';
 import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
 import { findMostSimilarRequest } from '../services/similarity.service.js';
 import { isGeminiConfigured, env } from '../config/env.js';
@@ -287,7 +287,7 @@ publicRouter.post(
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
     const request = db
-      .prepare('SELECT id, status, requester_confirmed_at FROM requests WHERE request_code = ?')
+      .prepare('SELECT * FROM requests WHERE request_code = ?')
       .get(req.params.code.trim().toUpperCase());
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
@@ -308,6 +308,39 @@ publicRouter.post(
       db.prepare(
         "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã được hỗ trợ')"
       ).run(request.id);
+      // Xác nhận qua nút trong email (một chạm) không có cơ hội chọn sao ngay — mời đánh giá
+      // riêng qua email sau đó thay vì bỏ lỡ hoàn toàn.
+      if (!hasRating) {
+        await sendCsatRequestEmail(request);
+      }
+    }
+
+    const updated = db
+      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
+      .get(req.params.code.trim().toUpperCase());
+    res.json({ ...updated, history: getRequestHistory(request.id) });
+  })
+);
+
+publicRouter.post(
+  '/track/:code/rate',
+  trackRequestLimiter,
+  asyncHandler(async (req, res) => {
+    const rating = Number(req.body?.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Đánh giá không hợp lệ.' });
+    }
+
+    const request = db
+      .prepare('SELECT id, status, csat_rating FROM requests WHERE request_code = ?')
+      .get(req.params.code.trim().toUpperCase());
+    if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
+    if (request.status !== 'done' && request.status !== 'done_auto') {
+      return res.status(400).json({ error: 'Yêu cầu này chưa hoàn thành, chưa thể đánh giá.' });
+    }
+
+    if (request.csat_rating === null) {
+      db.prepare('UPDATE requests SET csat_rating = ? WHERE id = ?').run(rating, request.id);
     }
 
     const updated = db

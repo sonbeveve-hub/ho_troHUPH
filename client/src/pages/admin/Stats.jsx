@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck, faRobot, faStar, faClipboardList, faFileArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import StatusBreakdown from '../../components/charts/StatusBreakdown.jsx';
 import CategoryBar from '../../components/charts/CategoryBar.jsx';
@@ -56,7 +58,8 @@ export default function Stats() {
           href="/api/admin/stats/export"
           className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
         >
-          ⬇ Xuất Excel
+          <FontAwesomeIcon icon={faFileArrowDown} className="mr-1.5" />
+          Xuất Excel
         </a>
       </div>
 
@@ -65,7 +68,7 @@ export default function Stats() {
         <div className="absolute -bottom-14 -left-6 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex items-center gap-4">
           <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-2xl shrink-0">
-            📋
+            <FontAwesomeIcon icon={faClipboardList} />
           </div>
           <div>
             <p className="text-white/80 text-sm">Tổng số yêu cầu hỗ trợ</p>
@@ -133,7 +136,10 @@ function ConfirmationStats({ stats }) {
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mt-5">
-      <h2 className="font-semibold text-slate-900 mb-4">✅ Xác nhận hoàn thành &amp; Hài lòng dịch vụ (CSAT)</h2>
+      <h2 className="font-semibold text-slate-900 mb-4">
+        <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
+        Xác nhận hoàn thành &amp; Hài lòng dịch vụ (CSAT)
+      </h2>
 
       <div className="grid sm:grid-cols-2 gap-5">
         <div className="grid grid-cols-2 gap-3">
@@ -149,7 +155,15 @@ function ConfirmationStats({ stats }) {
           />
           <MiniStat
             label="Điểm hài lòng TB (CSAT)"
-            value={avgRating ? `${avgRating.toFixed(1)} ★` : '—'}
+            value={
+              avgRating ? (
+                <>
+                  {avgRating.toFixed(1)} <FontAwesomeIcon icon={faStar} className="text-amber-400 text-sm" />
+                </>
+              ) : (
+                '—'
+              )
+            }
             sub={`${ratingCount} lượt đánh giá`}
           />
         </div>
@@ -162,7 +176,9 @@ function ConfirmationStats({ stats }) {
               const pct = ratingCount > 0 ? (count / ratingCount) * 100 : 0;
               return (
                 <div key={star} className="flex items-center gap-2 text-xs">
-                  <span className="w-8 text-slate-500 shrink-0">{star} ★</span>
+                  <span className="w-8 text-slate-500 shrink-0 inline-flex items-center gap-0.5">
+                    {star} <FontAwesomeIcon icon={faStar} className="text-[10px]" />
+                  </span>
                   <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                   </div>
@@ -186,7 +202,10 @@ function AiFeedbackStats({ stats }) {
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mt-5">
-      <h2 className="font-semibold text-slate-900 mb-4">🤖 Đánh giá phản hồi/hỗ trợ của Trợ lý AI hỗ trợ kỹ thuật</h2>
+      <h2 className="font-semibold text-slate-900 mb-4">
+        <FontAwesomeIcon icon={faRobot} className="mr-1.5" />
+        Đánh giá phản hồi/hỗ trợ của Trợ lý AI hỗ trợ kỹ thuật
+      </h2>
 
       {totalSuggested === 0 ? (
         <p className="text-sm text-slate-400">Chưa có yêu cầu nào được AI phân tích.</p>
@@ -204,7 +223,15 @@ function AiFeedbackStats({ stats }) {
             <MiniStat label="Chưa phản hồi" value={noFeedbackCount} dotClass="bg-slate-300" />
             <MiniStat
               label="Điểm đánh giá TB"
-              value={avgRating ? `${avgRating.toFixed(1)} ★` : '—'}
+              value={
+              avgRating ? (
+                <>
+                  {avgRating.toFixed(1)} <FontAwesomeIcon icon={faStar} className="text-amber-400 text-sm" />
+                </>
+              ) : (
+                '—'
+              )
+            }
               sub={`${ratingCount} lượt đánh giá`}
             />
           </div>
@@ -217,7 +244,9 @@ function AiFeedbackStats({ stats }) {
                 const pct = ratingCount > 0 ? (count / ratingCount) * 100 : 0;
                 return (
                   <div key={star} className="flex items-center gap-2 text-xs">
-                    <span className="w-8 text-slate-500 shrink-0">{star} ★</span>
+                    <span className="w-8 text-slate-500 shrink-0 inline-flex items-center gap-0.5">
+                    {star} <FontAwesomeIcon icon={faStar} className="text-[10px]" />
+                  </span>
                     <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                     </div>

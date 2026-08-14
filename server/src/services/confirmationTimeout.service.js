@@ -4,6 +4,7 @@ import {
   sendConfirmReminderEmail,
   sendAutoClosedEmail,
   sendStaleInProgressEmail,
+  sendCsatRequestEmail,
 } from './email.service.js';
 import { getSlaRule } from './sla.service.js';
 import { workingDaysSince } from './workingDays.service.js';
@@ -45,6 +46,9 @@ export async function runConfirmationSweep() {
         "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done_auto', 'Tự động đóng do người gửi không phản hồi trong thời hạn quy định')"
       ).run(request.id);
       await sendAutoClosedEmail(request);
+      if (request.csat_rating === null) {
+        await sendCsatRequestEmail(request);
+      }
       continue;
     }
 

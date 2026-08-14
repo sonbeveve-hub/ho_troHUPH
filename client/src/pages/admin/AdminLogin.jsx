@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import OrganicBackdrop from '../../components/OrganicBackdrop.jsx';
 import { FILE_TIME } from '../../utils/cacheBust.js';
@@ -68,7 +70,7 @@ export default function AdminLogin({ onLoggedIn }) {
             disabled={loading}
             className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
           >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'} {!loading && <span aria-hidden="true">→</span>}
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'} {!loading && <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />}
           </button>
         </form>
       </div>

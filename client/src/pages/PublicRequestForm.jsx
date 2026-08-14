@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
@@ -94,7 +96,7 @@ export default function PublicRequestForm() {
         <div className="relative z-10 max-w-md w-full flex flex-col items-center gap-4">
           <div className="w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-8 text-center">
             <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
-              ✓
+              <FontAwesomeIcon icon={faCheck} />
             </div>
             <h1 className="text-xl font-semibold text-slate-900">Đã gửi yêu cầu thành công</h1>
             <p className="mt-2 text-slate-600">
@@ -111,7 +113,7 @@ export default function PublicRequestForm() {
               }}
               className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
             >
-              Gửi yêu cầu khác <span aria-hidden="true">→</span>
+              Gửi yêu cầu khác <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
             </button>
             <p className="mt-4">
               <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 hover:underline">
@@ -252,7 +254,7 @@ export default function PublicRequestForm() {
             disabled={submitting}
             className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
           >
-            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <span aria-hidden="true">→</span>}
+            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />}
           </button>
         </form>
 

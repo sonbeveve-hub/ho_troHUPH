@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck, faTriangleExclamation, faRobot, faArrowLeft, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
+
+function StarRow({ rating, max = 5 }) {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {Array.from({ length: max }, (_, i) => (
+        <FontAwesomeIcon key={i} icon={i < rating ? faStarSolid : faStarRegular} />
+      ))}
+    </span>
+  );
+}
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'Mới tiếp nhận' },
@@ -129,7 +142,13 @@ export default function RequestDetail() {
     setMessage('');
     try {
       const res = await api.patch(`/admin/requests/${id}`, { status, note });
-      setMessage(res.emailSent ? 'Đã cập nhật và gửi email cho người yêu cầu.' : 'Đã cập nhật (email chưa được gửi — kiểm tra cấu hình SMTP).');
+      setMessage(
+        res.emailSent
+          ? 'Đã cập nhật và gửi email cho người yêu cầu.'
+          : res.emailReason === 'unchanged'
+            ? 'Đã lưu ghi chú (trạng thái không đổi nên không gửi email).'
+            : 'Đã cập nhật (email chưa được gửi — kiểm tra cấu hình SMTP).'
+      );
       setNote('');
       load();
     } catch (err) {
@@ -222,7 +241,8 @@ export default function RequestDetail() {
   return (
     <div className="max-w-3xl">
       <button onClick={() => navigate(-1)} className="text-sm text-slate-500 hover:text-slate-800 mb-4">
-        ← Quay lại danh sách
+        <FontAwesomeIcon icon={faArrowLeft} className="mr-1.5" />
+        Quay lại danh sách
       </button>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
@@ -382,7 +402,7 @@ export default function RequestDetail() {
                 <div className="col-span-2">
                   <dt className="text-slate-400">Cảnh báo trùng lặp</dt>
                   <dd className="text-amber-700">
-                    ⚠ Có thể trùng với{' '}
+                    <FontAwesomeIcon icon={faTriangleExclamation} /> Có thể trùng với{' '}
                     <a
                       href={`/admin/requests/${request.duplicate_of_id}`}
                       className="underline font-mono hover:text-amber-900"
@@ -405,12 +425,18 @@ export default function RequestDetail() {
               <div className="col-span-2">
                 <dt className="text-slate-400">Xác nhận từ người gửi</dt>
                 <dd className={request.requester_confirmed_at ? 'text-emerald-700' : 'text-slate-400'}>
-                  {request.requester_confirmed_at
-                    ? `✓ Đã xác nhận lúc ${new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}${request.confirmed_by === 'delegate' ? ' (admin xác nhận thay)' : ''}`
-                    : 'Chưa xác nhận'}
+                  {request.requester_confirmed_at ? (
+                    <>
+                      <FontAwesomeIcon icon={faCircleCheck} className="mr-1" />
+                      Đã xác nhận lúc {new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}
+                      {request.confirmed_by === 'delegate' ? ' (admin xác nhận thay)' : ''}
+                    </>
+                  ) : (
+                    'Chưa xác nhận'
+                  )}
                   {request.csat_rating ? (
                     <span className="ml-2 text-amber-600">
-                      {'★'.repeat(request.csat_rating)}{'☆'.repeat(5 - request.csat_rating)}
+                      <StarRow rating={request.csat_rating} />
                     </span>
                   ) : null}
                 </dd>
@@ -420,7 +446,12 @@ export default function RequestDetail() {
                   <dt className="text-slate-400">Số lần bị từ chối</dt>
                   <dd className={request.escalated_at ? 'text-red-600 font-semibold' : 'text-orange-600'}>
                     {request.reject_count} lần
-                    {request.escalated_at && ' ⚠ Cần chú ý — đã từ chối nhiều lần, nên ưu tiên xử lý'}
+                    {request.escalated_at && (
+                      <>
+                        {' '}
+                        <FontAwesomeIcon icon={faTriangleExclamation} /> Cần chú ý — đã từ chối nhiều lần, nên ưu tiên xử lý
+                      </>
+                    )}
                   </dd>
                 </div>
               )}
@@ -444,7 +475,9 @@ export default function RequestDetail() {
 
             {request.ai_suggestion && (
               <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                <p className="text-xs font-semibold text-slate-500 mb-2">🤖 Gợi ý từ AI</p>
+                <p className="text-xs font-semibold text-slate-500 mb-2">
+                  <FontAwesomeIcon icon={faRobot} className="mr-1" /> Gợi ý từ AI
+                </p>
                 <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.ai_suggestion}</p>
                 {request.ai_alternative_suggestion && (
                   <>
@@ -452,11 +485,26 @@ export default function RequestDetail() {
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.ai_alternative_suggestion}</p>
                   </>
                 )}
-                <p className="text-xs text-slate-400 mt-3">
-                  {request.ai_resolved === 1 && '✓ Người gửi báo đã khắc phục được'}
-                  {request.ai_resolved === 0 && '⚠ Người gửi báo chưa khắc phục được'}
+                <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                  {request.ai_resolved === 1 && (
+                    <>
+                      <FontAwesomeIcon icon={faCircleCheck} /> Người gửi báo đã khắc phục được
+                    </>
+                  )}
+                  {request.ai_resolved === 0 && (
+                    <>
+                      <FontAwesomeIcon icon={faTriangleExclamation} /> Người gửi báo chưa khắc phục được
+                    </>
+                  )}
                   {request.ai_resolved == null && 'Chưa có phản hồi từ người gửi'}
-                  {request.ai_rating ? ` · Đánh giá: ${'★'.repeat(request.ai_rating)}${'☆'.repeat(5 - request.ai_rating)}` : ''}
+                  {request.ai_rating ? (
+                    <>
+                      <span>· Đánh giá:</span>
+                      <StarRow rating={request.ai_rating} />
+                    </>
+                  ) : (
+                    ''
+                  )}
                 </p>
               </div>
             )}

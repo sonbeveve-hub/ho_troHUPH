@@ -9,6 +9,7 @@ import { confirmReminderEmail } from '../templates/confirmReminderEmail.js';
 import { autoClosedEmail } from '../templates/autoClosedEmail.js';
 import { reopenedNotificationEmail } from '../templates/reopenedNotificationEmail.js';
 import { staleInProgressEmail } from '../templates/staleInProgressEmail.js';
+import { csatRequestEmail } from '../templates/csatRequestEmail.js';
 
 // Message-ID gốc dùng chung cho mọi email của cùng 1 yêu cầu (kèm subject giống nhau ở
 // các template), để mail client (Outlook, Apple Mail...) gom chúng vào chung 1 luồng hội thoại
@@ -156,4 +157,12 @@ export async function sendStaleInProgressEmail(request, staleDays) {
   if (!to) return { sent: false, reason: 'no_recipient' };
   const { subject, html } = staleInProgressEmail({ request, staleDays });
   return dispatchEmail({ requestId: request.id, to, subject, html });
+}
+
+// Mời đánh giá hài lòng sau khi yêu cầu đã đóng mà chưa có csat_rating (xác nhận 1 chạm từ
+// email, admin xác nhận thay, hoặc tự động đóng — cả 3 trường hợp đều không có cơ hội chọn
+// sao ngay lúc đóng yêu cầu).
+export async function sendCsatRequestEmail(request) {
+  const { subject, html } = csatRequestEmail({ request });
+  return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
 }

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faCamera } from '@fortawesome/free-solid-svg-icons';
 
 const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 const MAX_COUNT = 10;
@@ -82,7 +84,8 @@ export default function ImagePicker({ files, onChange }) {
           onClick={() => inputRef.current?.click()}
           className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
         >
-          + Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
+          <FontAwesomeIcon icon={faPlus} className="mr-1" />
+          Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
         </button>
         <button
           type="button"
@@ -90,7 +93,8 @@ export default function ImagePicker({ files, onChange }) {
           title="Chụp ảnh bằng camera"
           className="shrink-0 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
         >
-          📷 Chụp ảnh
+          <FontAwesomeIcon icon={faCamera} className="mr-1" />
+          Chụp ảnh
         </button>
       </div>
       <input

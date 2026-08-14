@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck, faCircleXmark, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
@@ -26,6 +29,9 @@ export default function TrackRequest() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const autoConfirm = searchParams.get('confirm') === '1';
+  const autoReject = searchParams.get('action') === 'reject';
+  const autoRateStars = Number(searchParams.get('rate'));
+  const autoRate = Number.isInteger(autoRateStars) && autoRateStars >= 1 && autoRateStars <= 5 ? autoRateStars : null;
   const [q, setQ] = useState(codeParam || '');
   const [results, setResults] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
@@ -155,6 +161,8 @@ export default function TrackRequest() {
             request={request}
             onUpdate={updateResult}
             autoConfirm={autoConfirm}
+            autoReject={autoReject}
+            autoRate={autoRate}
           />
         ))}
       </div>
@@ -162,7 +170,7 @@ export default function TrackRequest() {
   );
 }
 
-function RequestDetailCard({ request, onUpdate, autoConfirm }) {
+function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRate }) {
   const [confirming, setConfirming] = useState(false);
   const [autoConfirmed, setAutoConfirmed] = useState(false);
   const [error, setError] = useState('');
@@ -170,6 +178,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
   const [rejecting, setRejecting] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [rateSubmitting, setRateSubmitting] = useState(false);
 
   const handleConfirm = async () => {
     setConfirming(true);
@@ -197,6 +206,15 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConfirm, request.status, request.requester_confirmed_at]);
 
+  // Mở sẵn form nhập lý do từ nút "Chưa được khắc phục" trong email (?action=reject) — không
+  // tự gửi (cần người dùng nhập lý do), chỉ đỡ phải tìm nút trên trang.
+  useEffect(() => {
+    if (autoReject && request.status === 'resolved_pending') {
+      setShowRejectForm(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReject, request.status]);
+
   const handleReject = async () => {
     if (rejectReason.trim().length < 3) {
       setError('Vui lòng cho biết lý do chưa hài lòng.');
@@ -217,6 +235,28 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
       setRejecting(false);
     }
   };
+
+  const handleRate = async (stars) => {
+    setRateSubmitting(true);
+    setError('');
+    try {
+      const data = await api.post(`/track/${encodeURIComponent(request.request_code)}/rate`, { rating: stars });
+      onUpdate(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRateSubmitting(false);
+    }
+  };
+
+  // Đánh giá "1 chạm" từ link sao trong email nhắc đánh giá (?rate=N): tự gửi ngay khi tải
+  // trang. csat_rating chặn gọi lại nếu đã đánh giá rồi (kể cả tải lại đúng link đó).
+  useEffect(() => {
+    if (autoRate && (request.status === 'done' || request.status === 'done_auto') && !request.csat_rating) {
+      handleRate(autoRate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRate, request.status, request.csat_rating]);
 
   return (
     <div className="mt-5 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8">
@@ -283,19 +323,51 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
       <div className="mt-6 border-t border-slate-100 pt-5">
         {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
 
-        {request.requester_confirmed_at ? (
-          <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-            ✓ Đã xác nhận hỗ trợ lúc {new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}.
+        {request.requester_confirmed_at || request.status === 'done_auto' ? (
+          <div
+            className={`rounded-xl px-4 py-3 border ${
+              request.requester_confirmed_at ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            {request.requester_confirmed_at ? (
+              <p className="text-sm text-emerald-700">
+                <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
+                Đã xác nhận hỗ trợ lúc {new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-600">
+                Yêu cầu đã được hệ thống tự động đóng do không nhận được phản hồi xác nhận trong thời hạn quy định.
+              </p>
+            )}
+
             {request.csat_rating ? (
-              <span className="block mt-1 text-amber-600">
-                Đánh giá của bạn: {'★'.repeat(request.csat_rating)}{'☆'.repeat(5 - request.csat_rating)}
-              </span>
-            ) : null}
-          </p>
-        ) : request.status === 'done_auto' ? (
-          <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-            Yêu cầu đã được hệ thống tự động đóng do không nhận được phản hồi xác nhận trong thời hạn quy định.
-          </p>
+              <p className="mt-1 text-sm text-amber-600 flex items-center gap-1">
+                <span>Đánh giá của bạn:</span>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FontAwesomeIcon key={star} icon={star <= request.csat_rating ? faStarSolid : faStarRegular} />
+                ))}
+              </p>
+            ) : rateSubmitting ? (
+              <p className="mt-2 text-xs text-slate-400">Đang gửi đánh giá...</p>
+            ) : (
+              <div className="mt-2">
+                <p className="text-xs text-slate-400 mb-1">Bạn hài lòng với kết quả hỗ trợ này không?</p>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => handleRate(star)}
+                      className="text-2xl leading-none text-slate-200 hover:text-amber-400 transition"
+                      title={`Đánh giá ${star} sao`}
+                    >
+                      <FontAwesomeIcon icon={faStarSolid} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         ) : request.status === 'reopened' ? (
           <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
             Yêu cầu đã được mở lại và Trung tâm đang tiếp tục xử lý. Bạn sẽ được thông báo khi có cập nhật mới.
@@ -319,7 +391,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
                   className={`text-2xl leading-none ${star <= rating ? 'text-amber-400' : 'text-slate-200'} hover:text-amber-400 transition`}
                   title={`Đánh giá ${star} sao (tuỳ chọn)`}
                 >
-                  ★
+                  <FontAwesomeIcon icon={faStarSolid} />
                 </button>
               ))}
               <span className="ml-2 text-xs text-slate-400">Đánh giá mức độ hài lòng (tuỳ chọn)</span>
@@ -331,14 +403,22 @@ function RequestDetailCard({ request, onUpdate, autoConfirm }) {
                 disabled={confirming || rejecting}
                 className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-sm text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
               >
-                {confirming ? 'Đang xác nhận...' : '✅ Xác nhận hoàn thành'}
+                {confirming ? (
+                  'Đang xác nhận...'
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
+                    Xác nhận hoàn thành
+                  </>
+                )}
               </button>
               <button
                 onClick={() => setShowRejectForm((v) => !v)}
                 disabled={confirming || rejecting}
                 className="rounded-full border border-red-200 bg-red-50 px-5 py-2 text-sm text-red-700 font-semibold hover:bg-red-100 transition disabled:opacity-60"
               >
-                ❌ Chưa hài lòng, yêu cầu xử lý lại
+                <FontAwesomeIcon icon={faCircleXmark} className="mr-1.5" />
+                Chưa hài lòng, yêu cầu xử lý lại
               </button>
             </div>
 

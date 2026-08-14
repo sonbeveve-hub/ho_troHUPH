@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 
 export default function FaqCandidates() {
@@ -131,7 +133,8 @@ export default function FaqCandidates() {
                   disabled={busyId === item.id}
                   className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
                 >
-                  ✅ Duyệt
+                  <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
+                  Duyệt
                 </button>
                 <button
                   onClick={() => startEdit(item)}
@@ -144,7 +147,8 @@ export default function FaqCandidates() {
                   disabled={busyId === item.id}
                   className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-60"
                 >
-                  ❌ Từ chối
+                  <FontAwesomeIcon icon={faCircleXmark} className="mr-1.5" />
+                  Từ chối
                 </button>
               </div>
             )}

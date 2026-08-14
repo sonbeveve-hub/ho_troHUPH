@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperclip, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
 
@@ -175,17 +177,17 @@ export default function RequestsList() {
                 <span>· {r.department_name}</span>
                 {r.attachment_count > 0 && (
                   <span className="inline-flex items-center gap-1">
-                    📎 {r.attachment_count}
+                    <FontAwesomeIcon icon={faPaperclip} /> {r.attachment_count}
                   </span>
                 )}
                 {r.escalated_at && (
-                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-50 text-red-700">
-                    ⚠ Cần chú ý
+                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-50 text-red-700">
+                    <FontAwesomeIcon icon={faTriangleExclamation} /> Cần chú ý
                   </span>
                 )}
                 {r.duplicate_of_code && (
-                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
-                    ⚠ Có thể trùng {r.duplicate_of_code}
+                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
+                    <FontAwesomeIcon icon={faTriangleExclamation} /> Có thể trùng {r.duplicate_of_code}
                   </span>
                 )}
               </div>

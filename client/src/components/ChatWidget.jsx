@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRobot, faXmark, faStar } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 
 // Chatbox AI xuất hiện ngay sau khi gửi yêu cầu thành công: AI đọc mô tả + ảnh đính kèm
@@ -123,12 +125,12 @@ export default function ChatWidget({ requestCode, onClose }) {
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100">
           <div className="flex items-center gap-2 min-w-0">
             <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm">
-              🤖
+              <FontAwesomeIcon icon={faRobot} />
             </div>
             <p className="text-sm font-semibold text-slate-800 truncate">Trợ lý AI hỗ trợ kỹ thuật</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0 px-1" title="Đóng">
-            ✕
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
 
@@ -183,7 +185,7 @@ export default function ChatWidget({ requestCode, onClose }) {
                 className="text-2xl leading-none px-0.5 text-amber-400 hover:scale-110 transition disabled:opacity-60"
                 title={`${star} sao`}
               >
-                ★
+                <FontAwesomeIcon icon={faStar} />
               </button>
             ))}
           </div>

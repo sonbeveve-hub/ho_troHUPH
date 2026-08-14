@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 import ExcelImportModal from './ExcelImportModal.jsx';
 
@@ -241,7 +243,7 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
                     title="Chuyển lên"
                     className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
                   >
-                    ↑
+                    <FontAwesomeIcon icon={faArrowUp} />
                   </button>
                   <button
                     onClick={() => move(item, 'down')}
@@ -249,7 +251,7 @@ export default function CategoryManager({ title, apiBase, hasDescription, import
                     title="Chuyển xuống"
                     className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
                   >
-                    ↓
+                    <FontAwesomeIcon icon={faArrowDown} />
                   </button>
                 </div>
                 <div className="min-w-0 flex-1">
