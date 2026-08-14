@@ -6,6 +6,7 @@ import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
+import { TicketIllustration, ClockIllustration } from '../components/illustrations.jsx';
 import { FILE_TIME } from '../utils/cacheBust.js';
 
 const STATUS_ORDER = {
@@ -100,14 +101,19 @@ export default function TrackRequest() {
     <div className="min-h-screen px-4 py-10">
       <OrganicBackdrop />
       <div className="relative z-10 max-w-xl mx-auto">
-        <div className="mb-6 text-center">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+        <div className="mb-2 text-center">
+          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-4" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
             Tra cứu yêu cầu hỗ trợ
           </h1>
-          <p className="mt-2 text-slate-700 font-medium">
+          <p className="mt-2 text-slate-600">
             Nhập mã yêu cầu, họ tên, email hoặc khoa/phòng/đơn vị để xem tình trạng xử lý.
           </p>
+        </div>
+
+        <div className="relative h-14 mb-2 hidden sm:block" aria-hidden="true">
+          <TicketIllustration className="absolute left-6 top-0 h-14 w-14 -rotate-6" />
+          <ClockIllustration className="absolute right-6 top-0 h-14 w-14 rotate-6" />
         </div>
 
         <form
@@ -123,7 +129,7 @@ export default function TrackRequest() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
+            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60"
           >
             {loading ? 'Đang tìm...' : 'Tra cứu'}
           </button>

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
+import ScrollReveal from '../components/ScrollReveal.jsx';
+import { ChatBubbleIllustration, ShieldCheckIllustration, LaptopIllustration } from '../components/illustrations.jsx';
 import { FILE_TIME } from '../utils/cacheBust.js';
 
 export default function PublicFaq() {
@@ -26,17 +30,23 @@ export default function PublicFaq() {
   }, [items, q]);
 
   return (
-    <div className="min-h-screen px-4 py-10">
+    <div className="min-h-screen px-4 pb-16">
       <OrganicBackdrop />
-      <div className="relative z-10 max-w-2xl mx-auto">
+      <div className="relative z-10 max-w-2xl mx-auto pt-12 sm:pt-16">
         <div className="mb-6 text-center">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-5" />
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
             Câu hỏi thường gặp
           </h1>
-          <p className="mt-2 text-slate-700 font-medium">
+          <p className="mt-3 text-slate-600">
             Tổng hợp từ các yêu cầu hỗ trợ đã xử lý — thử tìm ở đây trước khi gửi yêu cầu mới.
           </p>
+        </div>
+
+        <div className="relative h-16 mb-4 hidden sm:block" aria-hidden="true">
+          <ChatBubbleIllustration className="absolute left-2 top-0 h-14 w-14 -rotate-6" />
+          <LaptopIllustration className="absolute left-1/2 -translate-x-1/2 top-2 h-12 w-12 rotate-3" />
+          <ShieldCheckIllustration className="absolute right-2 top-0 h-14 w-14 rotate-6" />
         </div>
 
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-4 mb-5">
@@ -63,20 +73,22 @@ export default function PublicFaq() {
         )}
 
         <div className="space-y-3">
-          {filtered.map((item) => (
-            <details
-              key={item.id}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 p-4 group"
-            >
-              <summary className="cursor-pointer font-medium text-slate-900 flex items-start justify-between gap-3">
-                <span>{item.question}</span>
-                <span className="text-slate-400 group-open:rotate-180 transition shrink-0">▾</span>
-              </summary>
-              <p className="mt-3 text-sm text-slate-600 whitespace-pre-wrap">{item.answer}</p>
-              {item.request_type_name && (
-                <p className="mt-2 text-xs text-slate-400">{item.request_type_name}</p>
-              )}
-            </details>
+          {filtered.map((item, i) => (
+            <ScrollReveal key={item.id} delay={Math.min(i, 6) * 60}>
+              <details className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 p-4 group hover:shadow-md transition">
+                <summary className="cursor-pointer font-medium text-slate-900 flex items-start justify-between gap-3">
+                  <span>{item.question}</span>
+                  <FontAwesomeIcon
+                    icon={faChevronDown}
+                    className="text-slate-400 group-open:rotate-180 transition shrink-0 mt-1"
+                  />
+                </summary>
+                <p className="mt-3 text-sm text-slate-600 whitespace-pre-wrap">{item.answer}</p>
+                {item.request_type_name && (
+                  <p className="mt-2 text-xs text-slate-400">{item.request_type_name}</p>
+                )}
+              </details>
+            </ScrollReveal>
           ))}
         </div>
 

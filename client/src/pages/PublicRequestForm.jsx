@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faArrowRight, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ChatWidget from '../components/ChatWidget.jsx';
+import ScrollReveal from '../components/ScrollReveal.jsx';
+import {
+  LaptopIllustration,
+  HeadsetIllustration,
+  ChatBubbleIllustration,
+  ShieldCheckIllustration,
+  ClockIllustration,
+  TicketIllustration,
+  WifiIllustration,
+} from '../components/illustrations.jsx';
 import { FILE_TIME } from '../utils/cacheBust.js';
 
 // eslint-disable-next-line no-undef
@@ -20,6 +30,29 @@ const EMPTY_FORM = {
   description: '',
   website: '', // honeypot
 };
+
+const VALUE_PROPS = [
+  {
+    Icon: ClockIllustration,
+    title: 'Gửi yêu cầu trong 1 phút',
+    text: 'Không cần đăng nhập, không cần cài đặt gì — điền form, gửi, xong.',
+  },
+  {
+    Icon: ChatBubbleIllustration,
+    title: 'AI gợi ý khắc phục tức thì',
+    text: 'Trợ lý AI đọc mô tả sự cố của bạn và gợi ý cách tự xử lý ngay lập tức.',
+  },
+  {
+    Icon: TicketIllustration,
+    title: 'Theo dõi minh bạch',
+    text: 'Tra cứu tiến độ bất cứ lúc nào bằng mã yêu cầu, xem trọn lịch sử xử lý.',
+  },
+  {
+    Icon: ShieldCheckIllustration,
+    title: 'Xác nhận trước khi đóng',
+    text: 'Yêu cầu chỉ đóng khi bạn xác nhận đã được hỗ trợ — không đóng một chiều.',
+  },
+];
 
 export default function PublicRequestForm() {
   const [departments, setDepartments] = useState([]);
@@ -111,7 +144,7 @@ export default function PublicRequestForm() {
                 setImages([]);
                 setShowChat(true);
               }}
-              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition"
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-6 py-2.5 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition"
             >
               Gửi yêu cầu khác <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
             </button>
@@ -128,19 +161,57 @@ export default function PublicRequestForm() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-10">
+    <div className="min-h-screen px-4 pb-16">
       <OrganicBackdrop />
-      <div className="relative z-10 max-w-xl mx-auto">
-        <div className="mb-6 text-center">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-20 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
-            Cổng tiếp nhận hỗ trợ IT
+
+      {/* ===== Hero ===== */}
+      <div className="relative z-10 max-w-5xl mx-auto pt-12 sm:pt-16">
+        <div className="text-center max-w-2xl mx-auto">
+          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-6" />
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+            Hỗ trợ IT, nhanh và minh bạch
           </h1>
-          <p className="mt-2 text-slate-700 font-medium">
-            Kênh tiếp nhận hỗ trợ kỹ thuật dành riêng cho Cán bộ và Giảng viên. Thầy/Cô vui lòng
-            cung cấp thông tin bên dưới (không cần đăng nhập), Trung tâm sẽ xử lý và phản hồi trực
-            tiếp qua email.
+          <p className="mt-4 text-slate-600 text-base sm:text-lg">
+            Kênh tiếp nhận hỗ trợ kỹ thuật dành riêng cho Cán bộ và Giảng viên Trường Đại học Y tế
+            Công cộng. Không cần đăng nhập — Trung tâm phản hồi trực tiếp qua email.
           </p>
+          <a
+            href="#form"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-7 py-3 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition"
+          >
+            Gửi yêu cầu ngay <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
+          </a>
+        </div>
+
+        {/* Illustration cụm trang trí rải rác — thay cho ảnh chụp thật */}
+        <div className="relative h-28 sm:h-40 mt-6 hidden sm:block" aria-hidden="true">
+          <LaptopIllustration className="absolute left-[6%] top-2 h-20 w-20 -rotate-6 drop-shadow-sm" />
+          <HeadsetIllustration className="absolute left-[28%] top-10 h-14 w-14 rotate-6 drop-shadow-sm" />
+          <WifiIllustration className="absolute right-[30%] top-0 h-16 w-16 rotate-3 drop-shadow-sm" />
+          <ClockIllustration className="absolute right-[10%] top-8 h-20 w-20 -rotate-3 drop-shadow-sm" />
+        </div>
+      </div>
+
+      {/* ===== Value props ===== */}
+      <div className="relative z-10 max-w-5xl mx-auto mt-6 sm:mt-2">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {VALUE_PROPS.map(({ Icon, title, text }, i) => (
+            <ScrollReveal key={title} delay={i * 80}>
+              <div className="h-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-emerald-900/5 border border-white/60 p-5 hover:-translate-y-1 hover:shadow-xl transition">
+                <Icon className="h-14 w-14 mb-3" />
+                <h3 className="font-semibold text-slate-900 text-sm">{title}</h3>
+                <p className="mt-1 text-xs text-slate-500 leading-relaxed">{text}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== Form ===== */}
+      <ScrollReveal as="div" id="form" className="relative z-10 max-w-xl mx-auto mt-14 scroll-mt-8">
+        <div className="mb-6 text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Gửi yêu cầu hỗ trợ</h2>
+          <p className="mt-1 text-sm text-slate-500">Điền thông tin bên dưới, chúng tôi sẽ xử lý sớm nhất có thể.</p>
         </div>
 
         <form
@@ -215,7 +286,7 @@ export default function PublicRequestForm() {
                   key={p.id}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, processingTimeId: String(p.id) }))}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition active:scale-95 ${
                     form.processingTimeId === String(p.id)
                       ? 'border-transparent bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/30'
                       : 'border-slate-200 bg-white/70 text-slate-600 hover:bg-white'
@@ -252,7 +323,7 @@ export default function PublicRequestForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60"
           >
             {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />}
           </button>
@@ -270,7 +341,7 @@ export default function PublicRequestForm() {
           </Link>
         </p>
         <p className="mt-2 text-center text-xs text-slate-400">Phiên bản v{APP_VERSION}</p>
-      </div>
+      </ScrollReveal>
     </div>
   );
 }
