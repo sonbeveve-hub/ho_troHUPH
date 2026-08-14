@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
 import { logAudit } from '../services/audit.service.js';
 import {
   importDepartmentsFromExcel,
@@ -13,7 +13,7 @@ import {
 const PRIORITY_VALUES = new Set(['P1', 'P2', 'P3', 'P4']);
 
 export const adminCategoriesRouter = Router();
-adminCategoriesRouter.use(requireAdmin);
+adminCategoriesRouter.use(requireAdmin, requireFullAdmin);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 

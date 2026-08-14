@@ -2,12 +2,12 @@ import { Router } from 'express';
 import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
 import { normalizeText } from '../utils/normalizeText.js';
 import { importStaffFromExcel } from '../services/excelImport.service.js';
 
 export const adminStaffRouter = Router();
-adminStaffRouter.use(requireAdmin);
+adminStaffRouter.use(requireAdmin, requireFullAdmin);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const PAGE_SIZE = 30;

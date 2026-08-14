@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Roboto', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
+        sans: ['Be Vietnam Pro', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
       },
       colors: {
         brand: {

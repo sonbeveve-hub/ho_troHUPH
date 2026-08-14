@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   password_hash TEXT NOT NULL,
   full_name TEXT,
   email TEXT,
-  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin')),
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin','handler')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
   last_login_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -202,3 +202,10 @@ CREATE TABLE IF NOT EXISTS faq_candidates (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_faq_candidates_status ON faq_candidates(status);
+
+-- Đánh dấu tháng nào đã gửi báo cáo tổng quan định kỳ (mùng 2 hằng tháng) — chặn gửi trùng
+-- nếu tiến trình quét chạy nhiều lần trong cùng khoảng ngày mùng 2-3.
+CREATE TABLE IF NOT EXISTS monthly_reports (
+  year_month TEXT PRIMARY KEY,
+  sent_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

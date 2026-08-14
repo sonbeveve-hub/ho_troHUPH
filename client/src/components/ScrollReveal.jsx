@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 // Bọc quanh 1 block để hiệu ứng mờ dần + trượt lên khi cuộn tới (chỉ chạy 1 lần, không lặp
 // lại khi cuộn qua lại) — dùng IntersectionObserver thuần, không cần thêm thư viện animation.
-export default function ScrollReveal({ children, delay = 0, className = '', as: Tag = 'div' }) {
+// Nhận thêm ...rest (id, onClick, aria-*...) và truyền thẳng xuống Tag — thiếu bước này khiến
+// id="form" bị rớt mất, nút CTA neo #form không tìm thấy phần tử để cuộn tới.
+export default function ScrollReveal({ children, delay = 0, className = '', as: Tag = 'div', ...rest }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
 
@@ -29,6 +31,7 @@ export default function ScrollReveal({ children, delay = 0, className = '', as: 
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       } ${className}`}
       style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
+      {...rest}
     >
       {children}
     </Tag>

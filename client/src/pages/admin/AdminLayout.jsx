@@ -19,18 +19,21 @@ import { api } from '../../api/client.js';
 import OrganicBackdrop from '../../components/OrganicBackdrop.jsx';
 import { FILE_TIME } from '../../utils/cacheBust.js';
 
+// fullAdminOnly: true — ẩn khỏi role 'handler' (người phụ trách chỉ xử lý yêu cầu được phân
+// công, không cấu hình danh mục/SLA/ngày nghỉ/nhân sự/FAQ). Backend cũng chặn tương ứng bằng
+// requireFullAdmin, đây chỉ là ẩn UI cho gọn.
 const NAV_ITEMS = [
   { to: '/admin', label: 'Tổng quan', icon: faGaugeHigh, end: true },
   { to: '/admin/requests', label: 'Yêu cầu', icon: faInbox },
-  { to: '/admin/departments', label: 'Đơn vị', icon: faBuilding },
-  { to: '/admin/request-types', label: 'Loại yêu cầu', icon: faLayerGroup },
-  { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: faClock },
-  { to: '/admin/sla-rules', label: 'Quy tắc SLA', icon: faStopwatch },
-  { to: '/admin/holidays', label: 'Ngày nghỉ lễ', icon: faCalendarDays },
-  { to: '/admin/staff', label: 'Nhân sự', icon: faAddressBook },
-  { to: '/admin/assignees', label: 'Người phụ trách', icon: faUserGear },
-  { to: '/admin/faq', label: 'Cơ sở tri thức', icon: faCircleQuestion },
-  { to: '/admin/faq-candidates', label: 'Đề xuất FAQ', icon: faLightbulb },
+  { to: '/admin/departments', label: 'Đơn vị', icon: faBuilding, fullAdminOnly: true },
+  { to: '/admin/request-types', label: 'Loại yêu cầu', icon: faLayerGroup, fullAdminOnly: true },
+  { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: faClock, fullAdminOnly: true },
+  { to: '/admin/sla-rules', label: 'Quy tắc SLA', icon: faStopwatch, fullAdminOnly: true },
+  { to: '/admin/holidays', label: 'Ngày nghỉ lễ', icon: faCalendarDays, fullAdminOnly: true },
+  { to: '/admin/staff', label: 'Nhân sự', icon: faAddressBook, fullAdminOnly: true },
+  { to: '/admin/assignees', label: 'Người phụ trách', icon: faUserGear, fullAdminOnly: true },
+  { to: '/admin/faq', label: 'Cơ sở tri thức', icon: faCircleQuestion, fullAdminOnly: true },
+  { to: '/admin/faq-candidates', label: 'Đề xuất FAQ', icon: faLightbulb, fullAdminOnly: true },
 ];
 
 const SUPER_ADMIN_NAV_ITEMS = [
@@ -46,7 +49,9 @@ export default function AdminLayout({ admin, onLoggedOut }) {
     navigate('/admin/login');
   };
 
-  const navItems = admin?.role === 'super_admin' ? [...NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : NAV_ITEMS;
+  const baseItems =
+    admin?.role === 'handler' ? NAV_ITEMS.filter((item) => !item.fullAdminOnly) : NAV_ITEMS;
+  const navItems = admin?.role === 'super_admin' ? [...baseItems, ...SUPER_ADMIN_NAV_ITEMS] : baseItems;
 
   return (
     <div className="min-h-screen flex gap-4 p-4">

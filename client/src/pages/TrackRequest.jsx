@@ -112,8 +112,14 @@ export default function TrackRequest() {
         </div>
 
         <div className="relative h-14 mb-2 hidden sm:block" aria-hidden="true">
-          <TicketIllustration className="absolute left-6 top-0 h-14 w-14 -rotate-6" />
-          <ClockIllustration className="absolute right-6 top-0 h-14 w-14 rotate-6" />
+          <TicketIllustration
+            className="absolute left-6 top-0 h-14 w-14 animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '-6deg' }}
+          />
+          <ClockIllustration
+            className="absolute right-6 top-0 h-14 w-14 animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '6deg', animationDelay: '0.8s' }}
+          />
         </div>
 
         <form
@@ -180,19 +186,19 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
   const [confirming, setConfirming] = useState(false);
   const [autoConfirmed, setAutoConfirmed] = useState(false);
   const [error, setError] = useState('');
-  const [rating, setRating] = useState(0);
   const [rejecting, setRejecting] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rateSubmitting, setRateSubmitting] = useState(false);
 
+  // Không hỏi sao ngay lúc xác nhận nữa — đánh giá chỉ mời SAU KHI yêu cầu đã đóng (khối CSAT
+  // bên dưới), để tránh việc chọn sao rồi lỡ bấm "Chưa hài lòng" (không lưu) gây nhầm lẫn, và
+  // để cả luồng xác nhận 1 chạm từ email lẫn xác nhận thủ công trên trang dùng chung 1 nơi hỏi.
   const handleConfirm = async () => {
     setConfirming(true);
     setError('');
     try {
-      const data = await api.post(`/track/${encodeURIComponent(request.request_code)}/confirm`, {
-        rating: rating > 0 ? rating : undefined,
-      });
+      const data = await api.post(`/track/${encodeURIComponent(request.request_code)}/confirm`, {});
       onUpdate(data);
     } catch (err) {
       setError(err.message);
@@ -384,24 +390,10 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
           </p>
         ) : request.status === 'resolved_pending' ? (
           <div>
-            <p className="text-sm text-slate-500 mb-2">
-              Yêu cầu của bạn đã được hỗ trợ xong? Hãy xác nhận để Trung tâm ghi nhận và đóng yêu cầu.
+            <p className="text-sm text-slate-500 mb-3">
+              Yêu cầu của bạn đã được hỗ trợ xong? Hãy xác nhận để Trung tâm ghi nhận và đóng yêu
+              cầu — sau khi xác nhận, bạn sẽ được mời đánh giá trải nghiệm hỗ trợ.
             </p>
-
-            <div className="flex items-center gap-1 mb-3">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star === rating ? 0 : star)}
-                  className={`text-2xl leading-none ${star <= rating ? 'text-amber-400' : 'text-slate-200'} hover:text-amber-400 transition`}
-                  title={`Đánh giá ${star} sao (tuỳ chọn)`}
-                >
-                  <FontAwesomeIcon icon={faStarSolid} />
-                </button>
-              ))}
-              <span className="ml-2 text-xs text-slate-400">Đánh giá mức độ hài lòng (tuỳ chọn)</span>
-            </div>
 
             <div className="flex flex-wrap gap-2">
               <button

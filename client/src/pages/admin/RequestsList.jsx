@@ -30,9 +30,22 @@ export default function RequestsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [me, setMe] = useState(null);
+  // Mặc định lọc "Của tôi" khi tài khoản là người phụ trách (handler) — để đăng nhập vào là
+  // thấy ngay yêu cầu được phân công cho mình, không cần tự tìm. Vẫn cho bấm "Tất cả" nếu cần
+  // xem toàn bộ hàng đợi (không hạn chế cứng, chỉ đổi mặc định).
+  const [assignedToMeOnly, setAssignedToMeOnly] = useState(false);
+
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => {});
     api.get('/request-types').then(setRequestTypes).catch(() => {});
+    api
+      .get('/admin/me')
+      .then((data) => {
+        setMe(data);
+        if (data.role === 'handler') setAssignedToMeOnly(true);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -44,13 +57,14 @@ export default function RequestsList() {
     if (requestTypeId) params.set('request_type_id', requestTypeId);
     if (priority) params.set('priority', priority);
     if (q) params.set('q', q);
+    if (assignedToMeOnly && me?.username) params.set('assignee_email', me.username);
 
     api
       .get(`/admin/requests?${params.toString()}`)
       .then(setResult)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [status, departmentId, requestTypeId, priority, q, page]);
+  }, [status, departmentId, requestTypeId, priority, q, page, assignedToMeOnly, me]);
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
@@ -58,6 +72,21 @@ export default function RequestsList() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Yêu cầu hỗ trợ</h1>
+        {me?.username && (
+          <button
+            onClick={() => {
+              setAssignedToMeOnly((v) => !v);
+              setPage(1);
+            }}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              assignedToMeOnly
+                ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/30'
+                : 'border border-slate-200 bg-white/70 text-slate-600 hover:bg-white'
+            }`}
+          >
+            {assignedToMeOnly ? 'Của tôi' : 'Tất cả'}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1 mb-4 border-b border-slate-200">

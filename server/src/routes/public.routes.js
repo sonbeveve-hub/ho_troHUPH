@@ -86,6 +86,29 @@ publicRouter.get(
   })
 );
 
+// Vài số liệu tổng hợp không nhạy cảm (không có PII), hiển thị dạng "con số nổi bật" ở trang
+// chủ — chỉ tổng số/trung bình, không tiết lộ nội dung yêu cầu cụ thể nào.
+publicRouter.get(
+  '/public-stats',
+  asyncHandler(async (req, res) => {
+    const totalRequests = db.prepare('SELECT COUNT(*) c FROM requests').get().c;
+    const resolvedCount = db
+      .prepare("SELECT COUNT(*) c FROM requests WHERE status IN ('done','done_auto')")
+      .get().c;
+    const csat = db
+      .prepare('SELECT AVG(csat_rating) avg, COUNT(*) c FROM requests WHERE csat_rating IS NOT NULL')
+      .get();
+    const departmentCount = db.prepare('SELECT COUNT(*) c FROM departments WHERE active = 1').get().c;
+
+    res.json({
+      totalRequests,
+      resolvedCount,
+      avgCsatRating: csat.c > 0 ? Math.round(csat.avg * 10) / 10 : null,
+      departmentCount,
+    });
+  })
+);
+
 publicRouter.get(
   '/staff/lookup',
   asyncHandler(async (req, res) => {

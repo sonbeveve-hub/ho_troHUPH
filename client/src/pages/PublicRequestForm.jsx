@@ -8,6 +8,7 @@ import ImagePicker from '../components/form/ImagePicker.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ChatWidget from '../components/ChatWidget.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
+import StatCounter from '../components/StatCounter.jsx';
 import {
   LaptopIllustration,
   HeadsetIllustration,
@@ -67,11 +68,13 @@ export default function PublicRequestForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
   const [showChat, setShowChat] = useState(true);
+  const [publicStats, setPublicStats] = useState(null);
 
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => setDepartments([]));
     api.get('/request-types').then(setRequestTypes).catch(() => setRequestTypes([]));
     api.get('/processing-times').then(setProcessingTimes).catch(() => setProcessingTimes([]));
+    api.get('/public-stats').then(setPublicStats).catch(() => setPublicStats(null));
   }, []);
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -128,7 +131,7 @@ export default function PublicRequestForm() {
         <OrganicBackdrop />
         <div className="relative z-10 max-w-md w-full flex flex-col items-center gap-4">
           <div className="w-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-8 text-center">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
+            <div className="animate-count-up mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-brand-500/30">
               <FontAwesomeIcon icon={faCheck} />
             </div>
             <h1 className="text-xl font-semibold text-slate-900">Đã gửi yêu cầu thành công</h1>
@@ -167,28 +170,53 @@ export default function PublicRequestForm() {
       {/* ===== Hero ===== */}
       <div className="relative z-10 max-w-5xl mx-auto pt-12 sm:pt-16">
         <div className="text-center max-w-2xl mx-auto">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-6" />
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+          <img
+            src={`/logo.svg?filetime=${FILE_TIME}`}
+            alt="Trung tâm Tin học"
+            className="h-16 w-auto mx-auto mb-6 animate-fade-in-up"
+          />
+          <h1
+            className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent animate-fade-in-up"
+            style={{ animationDelay: '80ms' }}
+          >
             Hỗ trợ IT, nhanh và minh bạch
           </h1>
-          <p className="mt-4 text-slate-600 text-base sm:text-lg">
+          <p
+            className="mt-4 text-slate-600 text-base sm:text-lg animate-fade-in-up"
+            style={{ animationDelay: '160ms' }}
+          >
             Kênh tiếp nhận hỗ trợ kỹ thuật dành riêng cho Cán bộ và Giảng viên Trường Đại học Y tế
             Công cộng. Không cần đăng nhập — Trung tâm phản hồi trực tiếp qua email.
           </p>
           <a
             href="#form"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-7 py-3 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition"
+            className="group mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-7 py-3 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 hover:scale-105 active:scale-95 transition animate-fade-in-up"
+            style={{ animationDelay: '240ms' }}
           >
-            Gửi yêu cầu ngay <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" />
+            Gửi yêu cầu ngay
+            <FontAwesomeIcon icon={faArrowDown} aria-hidden="true" className="group-hover:translate-y-0.5 transition-transform" />
           </a>
         </div>
 
-        {/* Illustration cụm trang trí rải rác — thay cho ảnh chụp thật */}
+        {/* Illustration cụm trang trí rải rác — thay cho ảnh chụp thật, luôn chuyển động nhẹ
+            (không phụ thuộc cuộn) để trang có sức sống ngay từ lúc tải xong. */}
         <div className="relative h-28 sm:h-40 mt-6 hidden sm:block" aria-hidden="true">
-          <LaptopIllustration className="absolute left-[6%] top-2 h-20 w-20 -rotate-6 drop-shadow-sm" />
-          <HeadsetIllustration className="absolute left-[28%] top-10 h-14 w-14 rotate-6 drop-shadow-sm" />
-          <WifiIllustration className="absolute right-[30%] top-0 h-16 w-16 rotate-3 drop-shadow-sm" />
-          <ClockIllustration className="absolute right-[10%] top-8 h-20 w-20 -rotate-3 drop-shadow-sm" />
+          <LaptopIllustration
+            className="absolute left-[6%] top-2 h-20 w-20 drop-shadow-sm animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '-6deg', animationDelay: '0s' }}
+          />
+          <HeadsetIllustration
+            className="absolute left-[28%] top-10 h-14 w-14 drop-shadow-sm animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '6deg', animationDelay: '0.6s' }}
+          />
+          <WifiIllustration
+            className="absolute right-[30%] top-0 h-16 w-16 drop-shadow-sm animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '3deg', animationDelay: '1.2s' }}
+          />
+          <ClockIllustration
+            className="absolute right-[10%] top-8 h-20 w-20 drop-shadow-sm animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '-3deg', animationDelay: '1.8s' }}
+          />
         </div>
       </div>
 
@@ -197,8 +225,8 @@ export default function PublicRequestForm() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {VALUE_PROPS.map(({ Icon, title, text }, i) => (
             <ScrollReveal key={title} delay={i * 80}>
-              <div className="h-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-emerald-900/5 border border-white/60 p-5 hover:-translate-y-1 hover:shadow-xl transition">
-                <Icon className="h-14 w-14 mb-3" />
+              <div className="group h-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-emerald-900/5 border border-white/60 p-5 hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300">
+                <Icon className="h-14 w-14 mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3" />
                 <h3 className="font-semibold text-slate-900 text-sm">{title}</h3>
                 <p className="mt-1 text-xs text-slate-500 leading-relaxed">{text}</p>
               </div>
@@ -206,6 +234,43 @@ export default function PublicRequestForm() {
           ))}
         </div>
       </div>
+
+      {/* ===== Con số nổi bật ===== */}
+      {publicStats && publicStats.totalRequests > 0 && (
+        <ScrollReveal className="relative z-10 max-w-5xl mx-auto mt-14">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-400 via-emerald-500 to-teal-600 p-8 sm:p-10 shadow-xl shadow-brand-500/20">
+            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-14 -left-6 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <p className="relative text-center text-white/80 text-sm mb-6">
+              Vài con số từ những yêu cầu đã được Trung tâm xử lý
+            </p>
+            <div className="relative grid grid-cols-2 sm:grid-cols-3 gap-6 text-center">
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-white">
+                  <StatCounter value={publicStats.totalRequests} suffix="+" />
+                </p>
+                <p className="mt-1 text-xs text-white/80">Yêu cầu đã tiếp nhận</p>
+              </div>
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-white">
+                  <StatCounter value={publicStats.resolvedCount} suffix="+" />
+                </p>
+                <p className="mt-1 text-xs text-white/80">Đã xử lý xong</p>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <p className="text-3xl sm:text-4xl font-bold text-white">
+                  {publicStats.avgCsatRating != null ? (
+                    <StatCounter value={publicStats.avgCsatRating} decimals={1} suffix="/5" />
+                  ) : (
+                    '—'
+                  )}
+                </p>
+                <p className="mt-1 text-xs text-white/80">Điểm hài lòng trung bình</p>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
 
       {/* ===== Form ===== */}
       <ScrollReveal as="div" id="form" className="relative z-10 max-w-xl mx-auto mt-14 scroll-mt-8">
@@ -323,9 +388,16 @@ export default function PublicRequestForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60"
+            className="group w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2.5 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60"
           >
-            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'} {!submitting && <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />}
+            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
+            {!submitting && (
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                aria-hidden="true"
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            )}
           </button>
         </form>
 

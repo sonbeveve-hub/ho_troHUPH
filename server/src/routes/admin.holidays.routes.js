@@ -2,12 +2,12 @@ import { Router } from 'express';
 import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
 import { logAudit } from '../services/audit.service.js';
 import { importHolidaysFromExcel } from '../services/excelImport.service.js';
 
 export const adminHolidaysRouter = Router();
-adminHolidaysRouter.use(requireAdmin);
+adminHolidaysRouter.use(requireAdmin, requireFullAdmin);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 

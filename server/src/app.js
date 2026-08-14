@@ -56,10 +56,17 @@ export function createApp() {
     })
   );
 
+  // adminCategoriesRouter được mount ở prefix /api/admin trần (không có path con riêng) vì
+  // các route của nó (/departments, /request-types, /processing-times) không dùng chung 1
+  // tiền tố cố định. Express khớp middleware theo THỨ TỰ ĐĂNG KÝ chứ không theo độ cụ thể của
+  // path, nên nếu router này đăng ký TRƯỚC router khác cũng nằm dưới /api/admin/*, middleware
+  // .use(requireFullAdmin) bên trong nó sẽ chặn nhầm cả những request vốn không khớp route nào
+  // của nó (ví dụ suýt chặn nhầm /api/admin/stats/* trước khi tới đúng adminStatsRouter — lỗi
+  // thật đã gặp khi thêm role 'handler'). Luôn đăng ký router này SAU CÙNG trong nhóm /api/admin
+  // để nó chỉ còn "vét" đúng phần không router cụ thể nào khác nhận.
   app.use('/api', publicRouter);
   app.use('/api/admin', adminAuthRouter);
   app.use('/api/admin/requests', adminRequestsRouter);
-  app.use('/api/admin', adminCategoriesRouter);
   app.use('/api/admin/staff', adminStaffRouter);
   app.use('/api/admin/assignees', adminAssigneesRouter);
   app.use('/api/admin/stats', adminStatsRouter);
@@ -68,6 +75,7 @@ export function createApp() {
   app.use('/api/admin/sla-rules', adminSlaRouter);
   app.use('/api/admin/holidays', adminHolidaysRouter);
   app.use('/api/admin/faq-candidates', adminFaqCandidatesRouter);
+  app.use('/api/admin', adminCategoriesRouter);
 
   if (env.nodeEnv === 'production') {
     const clientDist = path.resolve(__dirname, '../../client/dist');

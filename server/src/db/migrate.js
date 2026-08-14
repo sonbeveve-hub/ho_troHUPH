@@ -269,6 +269,54 @@ function migrateAdminUserRoles() {
   }
 }
 
+// Thêm mức vai trò thứ 3 "handler" (người phụ trách) — chỉ xử lý yêu cầu được phân công,
+// không cấu hình danh mục/SLA/ngày nghỉ/nhân sự/FAQ. SQLite không ALTER được CHECK constraint
+// trực tiếp nên phải dựng lại bảng như các lần đổi CHECK trước — khác với các lần trước, có
+// thêm bước đếm số dòng trước/sau để chắc chắn không rơi mất tài khoản nào trong lúc dựng lại.
+function migrateHandlerRole() {
+  const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='admin_users'").get();
+  if (tableInfo && tableInfo.sql.includes("'handler'")) return; // đã migrate rồi
+
+  const beforeCount = db.prepare('SELECT COUNT(*) c FROM admin_users').get().c;
+  const wasForeignKeysOn = db.pragma('foreign_keys', { simple: true }) === 1;
+  db.pragma('foreign_keys = OFF');
+
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE admin_users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        full_name TEXT,
+        email TEXT,
+        role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin','handler')),
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
+        last_login_at TEXT
+      );
+    `);
+    db.exec(`
+      INSERT INTO admin_users_new
+        (id, username, password_hash, created_at, full_name, email, role, status, last_login_at)
+      SELECT id, username, password_hash, created_at, full_name, email, role, status, last_login_at
+      FROM admin_users;
+    `);
+
+    const afterCount = db.prepare('SELECT COUNT(*) c FROM admin_users_new').get().c;
+    if (afterCount !== beforeCount) {
+      throw new Error(
+        `migrateHandlerRole: số dòng không khớp sau khi copy (trước=${beforeCount}, sau=${afterCount}) — huỷ migration, giữ nguyên bảng cũ.`
+      );
+    }
+
+    db.exec('DROP TABLE admin_users;');
+    db.exec('ALTER TABLE admin_users_new RENAME TO admin_users;');
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email) WHERE email IS NOT NULL;');
+  })();
+
+  if (wasForeignKeysOn) db.pragma('foreign_keys = ON');
+}
+
 export function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
@@ -282,6 +330,7 @@ export function migrate() {
   migrateAddDuplicateColumn();
   migratePriorityEnum();
   migrateAdminUserRoles();
+  migrateHandlerRole();
   // Idempotent — bảo đảm các index này luôn tồn tại dù đi qua nhánh nào ở trên (cột có thể
   // vừa được ALTER TABLE thêm vào nên không đặt index này trong schema.sql).
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');

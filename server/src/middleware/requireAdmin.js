@@ -24,3 +24,13 @@ export function requireSuperAdmin(req, res, next) {
   }
   next();
 }
+
+// Chặn role 'handler' (người phụ trách) khỏi các trang cấu hình hệ thống — danh mục, SLA,
+// ngày nghỉ, nhân sự, người phụ trách, FAQ/đề xuất FAQ. Handler chỉ được vào Tổng quan +
+// Yêu cầu (route requests dùng requireAdmin thường, không dùng middleware này).
+export function requireFullAdmin(req, res, next) {
+  if (req.session?.adminRole === 'handler') {
+    return res.status(403).json({ error: 'Tài khoản người phụ trách không có quyền truy cập mục này.' });
+  }
+  next();
+}

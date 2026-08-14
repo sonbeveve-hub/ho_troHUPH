@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
 
 export const adminAssigneesRouter = Router();
-adminAssigneesRouter.use(requireAdmin);
+adminAssigneesRouter.use(requireAdmin, requireFullAdmin);
 
 adminAssigneesRouter.get(
   '/',

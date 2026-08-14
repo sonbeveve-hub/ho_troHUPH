@@ -4,6 +4,7 @@ import { seed } from './db/seed.js';
 import { createApp } from './app.js';
 import { startConfirmationSweep } from './services/confirmationTimeout.service.js';
 import { startFaqCandidateSweep } from './services/faqCandidate.service.js';
+import { startMonthlyReportSweep } from './services/monthlyReport.service.js';
 
 migrate();
 seed();
@@ -16,3 +17,4 @@ app.listen(env.port, () => {
 
 startConfirmationSweep();
 startFaqCandidateSweep();
+startMonthlyReportSweep();

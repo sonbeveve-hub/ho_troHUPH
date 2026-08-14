@@ -58,23 +58,28 @@ function buildCc(explicitCc) {
   return set.size ? Array.from(set).join(', ') : undefined;
 }
 
-async function dispatchEmail({ requestId, to, cc, subject, html, isThreadRoot }) {
+async function dispatchEmail({ requestId, to, cc, subject, html, isThreadRoot, attachments }) {
   const transport = getTransporter();
 
   if (!transport) {
-    logEmail({ requestId, to, subject, status: 'skipped_no_config' });
+    logEmail({ requestId: requestId ?? null, to, subject, status: 'skipped_no_config' });
     return { sent: false, reason: 'skipped_no_config' };
   }
 
-  const rootId = threadRootId(requestId);
   const mailOptions = { from: env.smtp.from, to, subject, html };
   const ccList = buildCc(cc);
   if (ccList) mailOptions.cc = ccList;
-  if (isThreadRoot) {
-    mailOptions.messageId = rootId;
-  } else {
-    mailOptions.inReplyTo = rootId;
-    mailOptions.references = rootId;
+  if (attachments) mailOptions.attachments = attachments;
+  // Chỉ gộp luồng hội thoại (Message-ID) cho email gắn với 1 yêu cầu cụ thể — email không có
+  // requestId (ví dụ báo cáo định kỳ) không cần và không nên gắn Message-ID giả.
+  if (requestId != null) {
+    const rootId = threadRootId(requestId);
+    if (isThreadRoot) {
+      mailOptions.messageId = rootId;
+    } else {
+      mailOptions.inReplyTo = rootId;
+      mailOptions.references = rootId;
+    }
   }
 
   try {
@@ -165,4 +170,22 @@ export async function sendStaleInProgressEmail(request, staleDays) {
 export async function sendCsatRequestEmail(request) {
   const { subject, html } = csatRequestEmail({ request });
   return dispatchEmail({ requestId: request.id, to: request.requester_email, subject, html });
+}
+
+// Báo cáo tổng quan định kỳ hằng tháng — không gắn với 1 yêu cầu cụ thể nào (requestId: null),
+// đính kèm file Excel dạng buffer (không cần lưu ra đĩa trước).
+export async function sendMonthlyReportEmail({ to, subject, html, workbookBuffer, filename }) {
+  return dispatchEmail({
+    requestId: null,
+    to,
+    subject,
+    html,
+    attachments: [
+      {
+        filename,
+        content: workbookBuffer,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    ],
+  });
 }

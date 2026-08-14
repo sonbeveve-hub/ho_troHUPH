@@ -30,7 +30,7 @@ adminUsersRouter.post(
     if (!fullName || !String(fullName).trim()) errors.push('Vui lòng nhập họ tên.');
     if (!email || !EMAIL_RE.test(String(email).trim())) errors.push('Vui lòng nhập email hợp lệ.');
     if (!password || String(password).length < 8) errors.push('Mật khẩu cần ít nhất 8 ký tự.');
-    if (!['super_admin', 'admin'].includes(role)) errors.push('Vai trò không hợp lệ.');
+    if (!['super_admin', 'admin', 'handler'].includes(role)) errors.push('Vai trò không hợp lệ.');
     if (errors.length) return res.status(400).json({ error: errors.join(' ') });
 
     const trimmedEmail = String(email).trim();
@@ -71,7 +71,7 @@ adminUsersRouter.patch(
     if (Number(req.params.id) === req.session.adminId && status === 'disabled') {
       return res.status(400).json({ error: 'Không thể tự khoá tài khoản đang đăng nhập.' });
     }
-    if (role !== undefined && !['super_admin', 'admin'].includes(role)) {
+    if (role !== undefined && !['super_admin', 'admin', 'handler'].includes(role)) {
       return res.status(400).json({ error: 'Vai trò không hợp lệ.' });
     }
     if (status !== undefined && !['active', 'disabled'].includes(status)) {

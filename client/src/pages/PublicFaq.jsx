@@ -44,9 +44,18 @@ export default function PublicFaq() {
         </div>
 
         <div className="relative h-16 mb-4 hidden sm:block" aria-hidden="true">
-          <ChatBubbleIllustration className="absolute left-2 top-0 h-14 w-14 -rotate-6" />
-          <LaptopIllustration className="absolute left-1/2 -translate-x-1/2 top-2 h-12 w-12 rotate-3" />
-          <ShieldCheckIllustration className="absolute right-2 top-0 h-14 w-14 rotate-6" />
+          <ChatBubbleIllustration
+            className="absolute left-2 top-0 h-14 w-14 animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '-6deg' }}
+          />
+          <LaptopIllustration
+            className="absolute left-1/2 -translate-x-1/2 top-2 h-12 w-12 animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '3deg', animationDelay: '0.6s' }}
+          />
+          <ShieldCheckIllustration
+            className="absolute right-2 top-0 h-14 w-14 animate-float hover:scale-110 transition-transform"
+            style={{ '--float-rot': '6deg', animationDelay: '1.2s' }}
+          />
         </div>
 
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-4 mb-5">

@@ -544,13 +544,22 @@ export default function RequestDetail() {
             onChange={(e) => setStatus(e.target.value)}
             className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
           >
-            {STATUS_OPTIONS.map((s) => (
+            {/* Khi còn "Mới tiếp nhận", bỏ tuỳ chọn "Đang xử lý" khỏi đây — dùng form "Phân
+                công xử lý" bên dưới để chuyển sang Đang xử lý, tránh 2 form cùng gửi 2 email
+                riêng cho cùng 1 hành động "bắt đầu xử lý". */}
+            {STATUS_OPTIONS.filter((s) => !(request.status === 'new' && s.value === 'in_progress')).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
           </select>
         </div>
+        {request.status === 'new' && (
+          <p className="text-xs text-slate-400">
+            Để bắt đầu xử lý, dùng form &quot;Phân công xử lý&quot; bên dưới — form đó tự chuyển
+            trạng thái sang Đang xử lý và gửi 1 email duy nhất.
+          </p>
+        )}
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}

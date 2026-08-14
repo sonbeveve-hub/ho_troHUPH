@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 
-const ROLE_LABEL = { super_admin: 'Quản trị cấp cao', admin: 'Quản lý' };
+const ROLE_LABEL = { super_admin: 'Quản trị cấp cao', admin: 'Quản lý', handler: 'Người phụ trách' };
 
 export default function AdminUsers() {
   const [items, setItems] = useState([]);
@@ -100,6 +100,7 @@ export default function AdminUsers() {
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
             className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
           >
+            <option value="handler">Người phụ trách</option>
             <option value="admin">Quản lý</option>
             <option value="super_admin">Quản trị cấp cao</option>
           </select>
@@ -130,6 +131,7 @@ export default function AdminUsers() {
                   onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
                   className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-1.5 text-sm"
                 >
+                  <option value="handler">Người phụ trách</option>
                   <option value="admin">Quản lý</option>
                   <option value="super_admin">Quản trị cấp cao</option>
                 </select>

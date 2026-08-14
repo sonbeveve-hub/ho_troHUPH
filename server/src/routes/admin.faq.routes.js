@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
 
 export const adminFaqRouter = Router();
-adminFaqRouter.use(requireAdmin);
+adminFaqRouter.use(requireAdmin, requireFullAdmin);
 
 const LIST_SELECT = `
   SELECT faq_entries.*, request_types.name AS request_type_name,
