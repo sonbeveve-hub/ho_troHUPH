@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
-import { env } from '../config/env.js';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
@@ -12,6 +11,8 @@ import {
 } from '../services/email.service.js';
 import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
+import { getSlaRule } from '../services/sla.service.js';
+import { workingDaysSince } from '../services/workingDays.service.js';
 
 const PRIORITY_VALUES = new Set(['P1', 'P2', 'P3', 'P4']);
 
@@ -215,7 +216,9 @@ adminRequestsRouter.patch(
 
 // Xác nhận thay người gửi (khi họ vắng mặt/không phản hồi được) — chỉ admin đã đăng nhập
 // mới gọi được endpoint này. Chỉ áp dụng khi yêu cầu đang chờ xác nhận VÀ đã qua thời hạn
-// nhắc nhở (cho người gửi cơ hội tự phản hồi trước), và bắt buộc admin ghi rõ lý do.
+// nhắc nhở tính theo NGÀY LÀM VIỆC của rule SLA khớp nhất (loại yêu cầu + mức ưu tiên, xem
+// sla.service.js) — cùng cách tính với runConfirmationSweep(), để nhất quán với ngưỡng nhắc
+// nhở/tự đóng tự động — và bắt buộc admin ghi rõ lý do.
 adminRequestsRouter.patch(
   '/:id/confirm-on-behalf',
   asyncHandler(async (req, res) => {
@@ -232,10 +235,11 @@ adminRequestsRouter.patch(
     if (!request.resolved_at) {
       return res.status(400).json({ error: 'Yêu cầu chưa có mốc thời gian xử lý hợp lệ.' });
     }
-    const daysSinceResolved = (Date.now() - new Date(`${request.resolved_at.replace(' ', 'T')}Z`).getTime()) / 86400000;
-    if (daysSinceResolved < env.confirmation.reminderDays) {
+    const resolvedAt = new Date(`${request.resolved_at.replace(' ', 'T')}Z`);
+    const { reminder_days: reminderDays } = getSlaRule(request.request_type_id, request.priority);
+    if (workingDaysSince(resolvedAt) < reminderDays) {
       return res.status(400).json({
-        error: `Chỉ có thể xác nhận thay sau ${env.confirmation.reminderDays} ngày kể từ khi đánh dấu đã xử lý, để người gửi có cơ hội tự phản hồi trước.`,
+        error: `Chỉ có thể xác nhận thay sau ${reminderDays} ngày làm việc kể từ khi đánh dấu đã xử lý, để người gửi có cơ hội tự phản hồi trước.`,
       });
     }
 
