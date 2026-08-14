@@ -29,11 +29,15 @@ const PAGE_SIZE = 20;
 const LIST_SELECT = `
   SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name,
          processing_times.name AS processing_time_name,
+         priorities.name AS priority_name, priorities.sort_order AS priority_sort_order,
+         dup.request_code AS duplicate_of_code, dup.id AS duplicate_of_id,
          (SELECT COUNT(*) FROM request_attachments WHERE request_attachments.request_id = requests.id) AS attachment_count
   FROM requests
   LEFT JOIN departments ON departments.id = requests.department_id
   LEFT JOIN request_types ON request_types.id = requests.request_type_id
   LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
+  LEFT JOIN priorities ON priorities.id = requests.priority_id
+  LEFT JOIN requests dup ON dup.id = requests.possible_duplicate_of_id
 `;
 
 adminRequestsRouter.get(
@@ -43,6 +47,7 @@ adminRequestsRouter.get(
       status,
       department_id: departmentId,
       request_type_id: requestTypeId,
+      priority_id: priorityId,
       assignee_email: assigneeEmail,
       q,
     } = req.query;
@@ -63,6 +68,10 @@ adminRequestsRouter.get(
       conditions.push('requests.request_type_id = ?');
       params.push(requestTypeId);
     }
+    if (priorityId) {
+      conditions.push('requests.priority_id = ?');
+      params.push(priorityId);
+    }
     if (assigneeEmail) {
       conditions.push('requests.assignee_email = ?');
       params.push(assigneeEmail);
@@ -78,8 +87,15 @@ adminRequestsRouter.get(
       .prepare(`SELECT COUNT(*) AS count FROM requests ${where}`)
       .get(...params).count;
 
+    // Sắp theo mức độ ưu tiên trước (sort_order nhỏ hơn = ưu tiên cao hơn, admin tự sắp xếp
+    // trong danh mục "Mức độ ưu tiên"), yêu cầu chưa gán mức độ xếp sau cùng; trong cùng mức
+    // độ thì mới nhất lên trước.
     const rows = db
-      .prepare(`${LIST_SELECT} ${where} ORDER BY requests.created_at DESC LIMIT ? OFFSET ?`)
+      .prepare(
+        `${LIST_SELECT} ${where}
+         ORDER BY COALESCE(priorities.sort_order, 999999) ASC, requests.created_at DESC
+         LIMIT ? OFFSET ?`
+      )
       .all(...params, PAGE_SIZE, (page - 1) * PAGE_SIZE);
 
     res.json({ data: rows, page, pageSize: PAGE_SIZE, total });
@@ -270,6 +286,37 @@ adminRequestsRouter.patch(
       String(requesterEmail).trim(),
       String(description).trim(),
       req.params.id
+    );
+
+    res.json({ ok: true });
+  })
+);
+
+// Đặt/đổi mức độ ưu tiên (dùng khi triage) — priorityId = null để bỏ gán.
+adminRequestsRouter.patch(
+  '/:id/priority',
+  asyncHandler(async (req, res) => {
+    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+
+    const { priorityId } = req.body || {};
+    let priorityName = null;
+    if (priorityId) {
+      const priority = db.prepare('SELECT id, name FROM priorities WHERE id = ?').get(priorityId);
+      if (!priority) return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
+      priorityName = priority.name;
+    }
+
+    db.prepare(
+      "UPDATE requests SET priority_id = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(priorityId || null, req.params.id);
+
+    db.prepare(
+      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
+    ).run(
+      req.params.id,
+      existing.status,
+      priorityName ? `Đổi mức độ ưu tiên thành: ${priorityName}` : 'Bỏ gán mức độ ưu tiên'
     );
 
     res.json({ ok: true });

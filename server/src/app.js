@@ -14,6 +14,7 @@ import { adminCategoriesRouter } from './routes/admin.categories.routes.js';
 import { adminStaffRouter } from './routes/admin.staff.routes.js';
 import { adminAssigneesRouter } from './routes/admin.assignees.routes.js';
 import { adminStatsRouter } from './routes/admin.stats.routes.js';
+import { adminFaqRouter } from './routes/admin.faq.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SqliteStore = SqliteStoreFactory(session);
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/admin/staff', adminStaffRouter);
   app.use('/api/admin/assignees', adminAssigneesRouter);
   app.use('/api/admin/stats', adminStatsRouter);
+  app.use('/api/admin/faq', adminFaqRouter);
 
   if (env.nodeEnv === 'production') {
     const clientDist = path.resolve(__dirname, '../../client/dist');

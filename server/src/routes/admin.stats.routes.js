@@ -7,6 +7,7 @@ import {
   getByAssignee,
   getAiStats,
   getConfirmationStats,
+  buildStatsWorkbook,
 } from '../services/stats.service.js';
 
 export const adminStatsRouter = Router();
@@ -37,6 +38,20 @@ adminStatsRouter.get(
   '/confirmation',
   asyncHandler(async (req, res) => {
     res.json(getConfirmationStats());
+  })
+);
+
+adminStatsRouter.get(
+  '/export',
+  asyncHandler(async (req, res) => {
+    const buffer = buildStatsWorkbook();
+    const filename = `bao-cao-ho-tro-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   })
 );
 

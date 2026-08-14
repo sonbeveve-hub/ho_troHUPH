@@ -33,6 +33,8 @@ const defaultRequestTypes = [
 
 const defaultProcessingTimes = ['1', '3', '5', '7', '15'];
 
+const defaultPriorities = ['Khẩn cấp', 'Bình thường', 'Thấp'];
+
 // Chỉ seed từng bảng khi bảng đó ĐANG RỖNG (cài đặt mới hoàn toàn). Trước đây seed() chạy
 // vô điều kiện mỗi lần server khởi động, dùng INSERT OR IGNORE theo tên — nhưng OR IGNORE chỉ
 // bỏ qua khi tên còn y nguyên, nên mỗi khi admin xoá hoặc đổi tên 1 mục mặc định, lần khởi động
@@ -41,6 +43,7 @@ export function seed() {
   const deptCount = db.prepare('SELECT COUNT(*) AS c FROM departments').get().c;
   const typeCount = db.prepare('SELECT COUNT(*) AS c FROM request_types').get().c;
   const processingTimeCount = db.prepare('SELECT COUNT(*) AS c FROM processing_times').get().c;
+  const priorityCount = db.prepare('SELECT COUNT(*) AS c FROM priorities').get().c;
 
   const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name, sort_order) VALUES (?, ?)');
   const insertType = db.prepare(
@@ -49,6 +52,7 @@ export function seed() {
   const insertProcessingTime = db.prepare(
     'INSERT OR IGNORE INTO processing_times (name, sort_order) VALUES (?, ?)'
   );
+  const insertPriority = db.prepare('INSERT OR IGNORE INTO priorities (name, sort_order) VALUES (?, ?)');
 
   const seedAll = db.transaction(() => {
     if (deptCount === 0) {
@@ -61,6 +65,9 @@ export function seed() {
     }
     if (processingTimeCount === 0) {
       defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
+    }
+    if (priorityCount === 0) {
+      defaultPriorities.forEach((name, index) => insertPriority.run(name, index + 1));
     }
   });
 

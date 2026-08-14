@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client.js';
-import { StatusBadge, ProcessingTimeBadge } from '../../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge, PriorityBadge } from '../../components/StatusBadge.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'Mới tiếp nhận' },
@@ -31,7 +31,9 @@ export default function RequestDetail() {
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
   const [processingTimes, setProcessingTimes] = useState([]);
+  const [priorities, setPriorities] = useState([]);
   const [assignees, setAssignees] = useState([]);
+  const [savingPriority, setSavingPriority] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -56,8 +58,45 @@ export default function RequestDetail() {
     api.get('/admin/departments').then(setDepartments);
     api.get('/admin/request-types').then(setRequestTypes);
     api.get('/admin/processing-times').then(setProcessingTimes);
+    api.get('/admin/priorities').then(setPriorities);
     api.get('/admin/assignees').then(setAssignees);
   }, []);
+
+  const handleCreateFaq = async () => {
+    if (!request.admin_notes) {
+      setFaqMessage('Chưa có ghi chú/giải pháp nào được lưu cho yêu cầu này để làm câu trả lời.');
+      return;
+    }
+    if (!confirm('Tạo mục FAQ mới với câu hỏi = mô tả yêu cầu, câu trả lời = ghi chú/giải pháp gần nhất?')) {
+      return;
+    }
+    setCreatingFaq(true);
+    setFaqMessage('');
+    try {
+      await api.post('/admin/faq', {
+        question: request.description,
+        answer: request.admin_notes,
+        requestTypeId: request.request_type_id,
+        sourceRequestId: request.id,
+      });
+      setFaqMessage('Đã tạo mục FAQ mới. Xem/chỉnh sửa tại trang Cơ sở tri thức.');
+    } catch (err) {
+      setFaqMessage(err.message);
+    } finally {
+      setCreatingFaq(false);
+    }
+  };
+
+  const handlePriorityChange = async (e) => {
+    const priorityId = e.target.value || null;
+    setSavingPriority(true);
+    try {
+      await api.patch(`/admin/requests/${id}/priority`, { priorityId });
+      load();
+    } finally {
+      setSavingPriority(false);
+    }
+  };
 
   useEffect(() => {
     if (!request) return;
@@ -70,6 +109,8 @@ export default function RequestDetail() {
 
   const [confirmingOnBehalf, setConfirmingOnBehalf] = useState(false);
   const [confirmOnBehalfError, setConfirmOnBehalfError] = useState('');
+  const [creatingFaq, setCreatingFaq] = useState(false);
+  const [faqMessage, setFaqMessage] = useState('');
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -281,6 +322,7 @@ export default function RequestDetail() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <StatusBadge status={request.status} />
+                <PriorityBadge name={request.priority_name} />
                 <ProcessingTimeBadge name={request.processing_time_name} />
                 <button onClick={startEdit} className="text-sm text-brand-600 hover:underline">
                   Sửa
@@ -312,6 +354,39 @@ export default function RequestDetail() {
                 <dt className="text-slate-400">Nguồn email</dt>
                 <dd className="text-slate-800">{request.email_source}</dd>
               </div>
+              <div>
+                <dt className="text-slate-400">Mức độ ưu tiên</dt>
+                <dd>
+                  <select
+                    value={request.priority_id || ''}
+                    onChange={handlePriorityChange}
+                    disabled={savingPriority}
+                    className="rounded-lg border border-slate-200 bg-white/70 px-2 py-1 text-sm disabled:opacity-60"
+                  >
+                    <option value="">-- Chưa gán --</option>
+                    {priorities.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+              {request.duplicate_of_code && (
+                <div className="col-span-2">
+                  <dt className="text-slate-400">Cảnh báo trùng lặp</dt>
+                  <dd className="text-amber-700">
+                    ⚠ Có thể trùng với{' '}
+                    <a
+                      href={`/admin/requests/${request.duplicate_of_id}`}
+                      className="underline font-mono hover:text-amber-900"
+                    >
+                      {request.duplicate_of_code}
+                    </a>{' '}
+                    (cùng người gửi, cùng loại yêu cầu, gửi gần đây)
+                  </dd>
+                </div>
+              )}
               {request.assignee_name && (
                 <div className="col-span-2">
                   <dt className="text-slate-400">Người xử lý</dt>
@@ -346,8 +421,19 @@ export default function RequestDetail() {
             </dl>
 
             <div className="mt-4">
-              <dt className="text-slate-400 text-sm">Mô tả</dt>
+              <dt className="text-slate-400 text-sm flex items-center justify-between">
+                <span>Mô tả</span>
+                <button
+                  onClick={handleCreateFaq}
+                  disabled={creatingFaq}
+                  className="text-xs text-brand-600 hover:underline disabled:opacity-60"
+                  title="Tạo mục Cơ sở tri thức từ mô tả + giải pháp (ghi chú gần nhất) của yêu cầu này"
+                >
+                  {creatingFaq ? 'Đang tạo...' : '+ Tạo FAQ từ yêu cầu này'}
+                </button>
+              </dt>
               <dd className="text-slate-800 mt-1 whitespace-pre-wrap">{request.description}</dd>
+              {faqMessage && <p className="mt-1 text-xs text-emerald-700">{faqMessage}</p>}
             </div>
 
             {request.ai_suggestion && (

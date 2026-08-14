@@ -7,6 +7,7 @@ import {
   importDepartmentsFromExcel,
   importRequestTypesFromExcel,
   importProcessingTimesFromExcel,
+  importPrioritiesFromExcel,
 } from '../services/excelImport.service.js';
 
 export const adminCategoriesRouter = Router();
@@ -166,4 +167,11 @@ registerCategoryRoutes(
   'processing_times',
   false,
   importProcessingTimesFromExcel
+);
+registerCategoryRoutes(
+  adminCategoriesRouter,
+  '/priorities',
+  'priorities',
+  false,
+  importPrioritiesFromExcel
 );

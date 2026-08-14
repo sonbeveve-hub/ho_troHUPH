@@ -262,6 +262,11 @@ export default function PublicRequestForm() {
             Tra cứu tình trạng xử lý
           </Link>
         </p>
+        <p className="mt-2 text-center text-sm text-slate-700 font-medium">
+          <Link to="/faq" className="text-brand-700 font-semibold hover:underline">
+            Xem câu hỏi thường gặp
+          </Link>
+        </p>
         <p className="mt-2 text-center text-xs text-slate-400">Phiên bản v{APP_VERSION}</p>
       </div>
     </div>

@@ -139,3 +139,7 @@ export function importRequestTypesFromExcel(buffer) {
 export function importProcessingTimesFromExcel(buffer) {
   return importSimpleCategory(buffer, 'processing_times', false);
 }
+
+export function importPrioritiesFromExcel(buffer) {
+  return importSimpleCategory(buffer, 'priorities', false);
+}

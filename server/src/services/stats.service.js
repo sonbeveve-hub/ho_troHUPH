@@ -1,4 +1,15 @@
+import * as XLSX from 'xlsx';
 import { db } from '../db/index.js';
+
+const STATUS_LABELS = {
+  new: 'Mới tiếp nhận',
+  in_progress: 'Đang xử lý',
+  resolved_pending: 'Đã xử lý - Chờ xác nhận',
+  reopened: 'Mở lại',
+  done: 'Hoàn thành',
+  done_auto: 'Đã đóng (tự động)',
+  rejected: 'Từ chối',
+};
 
 export function getSummary() {
   const total = db.prepare('SELECT COUNT(*) AS count FROM requests').get().count;
@@ -137,4 +148,75 @@ export function getTimeseries(days = 30) {
        ORDER BY date ASC`
     )
     .all(`-${days} days`);
+}
+
+// Xuất báo cáo Excel theo yêu cầu (không phải báo cáo tự động định kỳ) — admin bấm nút
+// "Xuất Excel" ở trang Tổng quan khi cần, tự chọn tần suất gửi cho ban lãnh đạo.
+export function buildStatsWorkbook() {
+  const summary = getSummary();
+
+  const overviewRows = [
+    ['Tổng số yêu cầu', summary.total],
+    [],
+    ['Theo trạng thái', ''],
+    ...summary.byStatus.map((s) => [STATUS_LABELS[s.status] || s.status, s.count]),
+    [],
+    ['Theo đơn vị', ''],
+    ...summary.byDepartment.map((d) => [d.label || '(chưa rõ)', d.count]),
+    [],
+    ['Theo loại yêu cầu', ''],
+    ...summary.byRequestType.map((t) => [t.label || '(chưa rõ)', t.count]),
+  ];
+  const overviewSheet = XLSX.utils.aoa_to_sheet(overviewRows);
+  overviewSheet['!cols'] = [{ wch: 40 }, { wch: 12 }];
+
+  const requests = db
+    .prepare(
+      `SELECT requests.request_code, requests.requester_name, requests.requester_email,
+              departments.name AS department_name, request_types.name AS request_type_name,
+              priorities.name AS priority_name, requests.status,
+              requests.assignee_name, requests.assignee_email,
+              requests.csat_rating, requests.reject_count,
+              requests.created_at, requests.updated_at
+       FROM requests
+       LEFT JOIN departments ON departments.id = requests.department_id
+       LEFT JOIN request_types ON request_types.id = requests.request_type_id
+       LEFT JOIN priorities ON priorities.id = requests.priority_id
+       ORDER BY requests.created_at DESC`
+    )
+    .all();
+
+  const listRows = [
+    [
+      'Mã yêu cầu', 'Người gửi', 'Email', 'Đơn vị', 'Loại yêu cầu', 'Mức độ ưu tiên',
+      'Trạng thái', 'Người phụ trách', 'Email người phụ trách', 'Điểm CSAT', 'Số lần từ chối',
+      'Thời gian gửi', 'Cập nhật gần nhất',
+    ],
+    ...requests.map((r) => [
+      r.request_code,
+      r.requester_name,
+      r.requester_email,
+      r.department_name || '',
+      r.request_type_name || '',
+      r.priority_name || '',
+      STATUS_LABELS[r.status] || r.status,
+      r.assignee_name || '',
+      r.assignee_email || '',
+      r.csat_rating || '',
+      r.reject_count || 0,
+      r.created_at,
+      r.updated_at,
+    ]),
+  ];
+  const listSheet = XLSX.utils.aoa_to_sheet(listRows);
+  listSheet['!cols'] = [
+    { wch: 12 }, { wch: 22 }, { wch: 24 }, { wch: 28 }, { wch: 24 }, { wch: 14 },
+    { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Tổng quan');
+  XLSX.utils.book_append_sheet(workbook, listSheet, 'Danh sách yêu cầu');
+
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }

@@ -201,6 +201,18 @@ function migrateAddInprogressReminderColumn() {
   db.exec('ALTER TABLE requests ADD COLUMN inprogress_reminder_sent_at TEXT;');
 }
 
+// Thêm cột mức độ ưu tiên (FK tới bảng priorities mới) và cột đánh dấu "có thể trùng lặp"
+// (FK tự tham chiếu requests.id) — cả hai không nằm trong CHECK constraint nào.
+function migrateAddPriorityAndDuplicateColumns() {
+  const columns = db.prepare('PRAGMA table_info(requests)').all();
+  if (!columns.some((c) => c.name === 'priority_id')) {
+    db.exec('ALTER TABLE requests ADD COLUMN priority_id INTEGER REFERENCES priorities(id);');
+  }
+  if (!columns.some((c) => c.name === 'possible_duplicate_of_id')) {
+    db.exec('ALTER TABLE requests ADD COLUMN possible_duplicate_of_id INTEGER REFERENCES requests(id);');
+  }
+}
+
 export function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
@@ -211,6 +223,9 @@ export function migrate() {
   migrateAddAiColumns();
   migrateConfirmationWorkflow();
   migrateAddInprogressReminderColumn();
-  // Idempotent — bảo đảm index này luôn tồn tại dù đi qua nhánh nào ở trên.
+  migrateAddPriorityAndDuplicateColumns();
+  // Idempotent — bảo đảm các index này luôn tồn tại dù đi qua nhánh nào ở trên (cột có thể
+  // vừa được ALTER TABLE thêm vào nên không đặt index này trong schema.sql).
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_priority ON requests(priority_id);');
 }

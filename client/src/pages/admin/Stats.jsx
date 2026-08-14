@@ -50,7 +50,15 @@ export default function Stats() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">Tổng quan</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Tổng quan</h1>
+        <a
+          href="/api/admin/stats/export"
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          ⬇ Xuất Excel
+        </a>
+      </div>
 
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-400 via-emerald-500 to-teal-600 p-6 mb-6 shadow-xl shadow-brand-500/20">
         <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />

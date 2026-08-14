@@ -9,8 +9,10 @@ const NAV_ITEMS = [
   { to: '/admin/departments', label: 'Đơn vị', icon: DeptIcon },
   { to: '/admin/request-types', label: 'Loại yêu cầu', icon: TypeIcon },
   { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: ClockIcon },
+  { to: '/admin/priorities', label: 'Mức độ ưu tiên', icon: PriorityIcon },
   { to: '/admin/staff', label: 'Nhân sự', icon: StaffIcon },
   { to: '/admin/assignees', label: 'Người phụ trách', icon: AssigneeIcon },
+  { to: '/admin/faq', label: 'Cơ sở tri thức', icon: FaqIcon },
 ];
 
 export default function AdminLayout({ admin, onLoggedOut }) {
@@ -127,6 +129,22 @@ function AssigneeIcon(props) {
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" />
       <path d="M9 12.5 11 14.5 15.5 10" />
+    </svg>
+  );
+}
+function PriorityIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M12 2 L12 14 M12 2 L18 6 L12 10 Z" />
+      <path d="M12 14v8" />
+    </svg>
+  );
+}
+function FaqIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 1.8-2 3.3M12 16.5v.1" strokeLinecap="round" />
     </svg>
   );
 }

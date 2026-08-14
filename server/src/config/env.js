@@ -33,6 +33,9 @@ export const env = {
     // chờ xác nhận hay trạng thái khác) thì nhắc người phụ trách — nhắc 1 lần duy nhất.
     inprogressStaleDays: Number(process.env.INPROGRESS_STALE_DAYS) || 3,
   },
+  // Cửa sổ thời gian để phát hiện yêu cầu có thể trùng lặp: cùng email người gửi + cùng
+  // loại yêu cầu, gửi trong vòng ngần này ngày, và yêu cầu trước đó chưa đóng.
+  duplicateWindowDays: Number(process.env.DUPLICATE_WINDOW_DAYS) || 3,
 };
 
 export const isSmtpConfigured = () =>

@@ -37,17 +37,30 @@ hướng dẫn cụ thể từng bước. Nếu sự cố cần kỹ thuật vi�
 thống...), hãy nói rõ trong phần chẩn đoán và trấn an rằng TTTH sẽ liên hệ sớm. Không dùng markdown hay dấu *, chỉ
 dùng văn bản thuần. Trả lời trong khoảng 100-180 từ.`;
 
-function buildContextText({ description, departmentName, requestTypeName }) {
-  return `Loại yêu cầu: ${requestTypeName || 'chưa rõ'}\nĐơn vị: ${departmentName || 'chưa rõ'}\nMô tả sự cố: ${description}`;
+function buildContextText({ description, departmentName, requestTypeName, relevantFaqs }) {
+  const faqBlock =
+    relevantFaqs && relevantFaqs.length
+      ? `\n\nCác câu hỏi thường gặp TTTH đã xử lý trước đây, có thể liên quan (tham khảo nếu phù hợp, không bắt buộc áp dụng nguyên văn):\n${relevantFaqs
+          .map((f, i) => `${i + 1}. Hỏi: ${f.question}\n   Đáp: ${f.answer}`)
+          .join('\n')}`
+      : '';
+  return `Loại yêu cầu: ${requestTypeName || 'chưa rõ'}\nĐơn vị: ${departmentName || 'chưa rõ'}\nMô tả sự cố: ${description}${faqBlock}`;
 }
 
-export async function getInitialSuggestion({ requestId, description, departmentName, requestTypeName, attachments }) {
+export async function getInitialSuggestion({
+  requestId,
+  description,
+  departmentName,
+  requestTypeName,
+  attachments,
+  relevantFaqs,
+}) {
   const genAI = getClient();
   if (!genAI) return null;
 
   const model = genAI.getGenerativeModel({ model: env.gemini.model });
   const parts = [
-    { text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName })}` },
+    { text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName, relevantFaqs })}` },
     ...buildImageParts(requestId, attachments),
   ];
 
@@ -62,6 +75,7 @@ export async function getAlternativeSuggestion({
   requestTypeName,
   attachments,
   previousSuggestion,
+  relevantFaqs,
 }) {
   const genAI = getClient();
   if (!genAI) return null;
@@ -69,7 +83,7 @@ export async function getAlternativeSuggestion({
   const model = genAI.getGenerativeModel({ model: env.gemini.model });
   const parts = [
     {
-      text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName })}\n\nBạn đã gợi ý trước đó:\n"${previousSuggestion}"\nNgười dùng cho biết cách này KHÔNG khắc phục được sự cố. Hãy đưa ra một chẩn đoán và hướng khác (không lặp lại cách cũ), vẫn theo đúng cấu trúc "Chẩn đoán:" rồi "Hướng khắc phục:". Nếu không còn cách nào để tự khắc phục, hãy nói rõ trong phần chẩn đoán và trấn an rằng TTTH sẽ liên hệ trực tiếp sớm.`,
+      text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName, relevantFaqs })}\n\nBạn đã gợi ý trước đó:\n"${previousSuggestion}"\nNgười dùng cho biết cách này KHÔNG khắc phục được sự cố. Hãy đưa ra một chẩn đoán và hướng khác (không lặp lại cách cũ), vẫn theo đúng cấu trúc "Chẩn đoán:" rồi "Hướng khắc phục:". Nếu không còn cách nào để tự khắc phục, hãy nói rõ trong phần chẩn đoán và trấn an rằng TTTH sẽ liên hệ trực tiếp sớm.`,
     },
     ...buildImageParts(requestId, attachments),
   ];
@@ -88,6 +102,7 @@ export async function getChatReply({
   attachments,
   history,
   userMessage,
+  relevantFaqs,
 }) {
   const genAI = getClient();
   if (!genAI) return null;
@@ -99,7 +114,7 @@ export async function getChatReply({
       role: 'user',
       parts: [
         {
-          text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName })}\n\nTừ đây, hãy tiếp tục trò chuyện tự nhiên để giải đáp thêm câu hỏi hoặc hướng dẫn chi tiết hơn cho thầy/cô, vẫn giữ đúng vai trò và giọng văn trên. Trả lời ngắn gọn, đúng trọng tâm câu hỏi, không cần lặp lại toàn bộ hướng dẫn trước đó trừ khi được yêu cầu. Không dùng markdown hay dấu *.`,
+          text: `${SYSTEM_PROMPT}\n\n${buildContextText({ description, departmentName, requestTypeName, relevantFaqs })}\n\nTừ đây, hãy tiếp tục trò chuyện tự nhiên để giải đáp thêm câu hỏi hoặc hướng dẫn chi tiết hơn cho thầy/cô, vẫn giữ đúng vai trò và giọng văn trên. Trả lời ngắn gọn, đúng trọng tâm câu hỏi, không cần lặp lại toàn bộ hướng dẫn trước đó trừ khi được yêu cầu. Không dùng markdown hay dấu *.`,
         },
         ...buildImageParts(requestId, attachments),
       ],

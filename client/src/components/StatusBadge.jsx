@@ -26,4 +26,13 @@ export function ProcessingTimeBadge({ name }) {
   );
 }
 
+export function PriorityBadge({ name }) {
+  if (!name) return null;
+  return (
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-rose-50 text-rose-700">
+      ⚑ {name}
+    </span>
+  );
+}
+
 export { STATUS_META };

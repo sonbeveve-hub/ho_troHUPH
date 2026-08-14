@@ -7,7 +7,7 @@ import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } f
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail } from '../services/email.service.js';
 import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
-import { isGeminiConfigured } from '../config/env.js';
+import { isGeminiConfigured, env } from '../config/env.js';
 
 export const publicRouter = Router();
 
@@ -63,6 +63,36 @@ publicRouter.get(
   asyncHandler(async (req, res) => {
     const rows = db
       .prepare('SELECT id, name FROM processing_times WHERE active = 1 ORDER BY sort_order, id')
+      .all();
+    res.json(rows);
+  })
+);
+
+// Không dùng ở form gửi yêu cầu (mức độ ưu tiên do admin triage, không phải người gửi tự
+// chọn) — chỉ để trang danh sách admin tái sử dụng cùng endpoint công khai như các danh mục
+// khác, tránh phải phân biệt 2 kiểu gọi API cho cùng 1 việc "lấy danh sách để hiển thị bộ lọc".
+publicRouter.get(
+  '/priorities',
+  asyncHandler(async (req, res) => {
+    const rows = db
+      .prepare('SELECT id, name FROM priorities WHERE active = 1 ORDER BY sort_order, id')
+      .all();
+    res.json(rows);
+  })
+);
+
+publicRouter.get(
+  '/faq',
+  asyncHandler(async (req, res) => {
+    const rows = db
+      .prepare(
+        `SELECT faq_entries.id, faq_entries.question, faq_entries.answer,
+                request_types.name AS request_type_name
+         FROM faq_entries
+         LEFT JOIN request_types ON request_types.id = faq_entries.request_type_id
+         WHERE faq_entries.active = 1
+         ORDER BY faq_entries.created_at DESC`
+      )
       .all();
     res.json(rows);
   })
@@ -151,11 +181,24 @@ publicRouter.post(
       return res.status(400).json({ error: errors.join(' ') });
     }
 
+    // Phát hiện khả năng trùng lặp: cùng email người gửi + cùng loại yêu cầu, gửi trong
+    // DUPLICATE_WINDOW_DAYS gần đây, và yêu cầu trước đó chưa đóng. Chỉ đánh dấu để admin
+    // xem xét gộp — KHÔNG chặn việc gửi, tránh cản trở người gửi có vấn đề thật sự khác nhau.
+    const possibleDuplicate = db
+      .prepare(
+        `SELECT id FROM requests
+         WHERE requester_email = ? AND request_type_id = ?
+           AND status NOT IN ('done', 'done_auto', 'rejected')
+           AND created_at >= datetime('now', ?)
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(String(requesterEmail).trim(), Number(requestTypeId), `-${env.duplicateWindowDays} days`);
+
     const insert = db.prepare(`
       INSERT INTO requests
         (request_code, requester_name, department_id, request_type_id, processing_time_id,
-         description, requester_email, email_source, status, ip_address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
+         description, requester_email, email_source, status, ip_address, possible_duplicate_of_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
     `);
 
     const info = insert.run(
@@ -167,7 +210,8 @@ publicRouter.post(
       String(description).trim(),
       String(requesterEmail).trim(),
       emailSource,
-      req.ip || null
+      req.ip || null,
+      possibleDuplicate ? possibleDuplicate.id : null
     );
 
     const requestCode = `REQ-${String(info.lastInsertRowid).padStart(6, '0')}`;
@@ -330,7 +374,7 @@ publicRouter.post(
 
 const AI_CONTEXT_SELECT = `
   SELECT requests.id, requests.description, requests.ai_suggestion, requests.ai_alternative_suggestion,
-         requests.ai_resolved, requests.ai_rating,
+         requests.ai_resolved, requests.ai_rating, requests.request_type_id,
          departments.name AS department_name, request_types.name AS request_type_name
   FROM requests
   LEFT JOIN departments ON departments.id = requests.department_id
@@ -342,6 +386,21 @@ function getAttachmentsFor(requestId) {
   return db
     .prepare('SELECT stored_name, mime_type FROM request_attachments WHERE request_id = ?')
     .all(requestId);
+}
+
+const MAX_RELEVANT_FAQS = 5;
+
+// Lấy các FAQ liên quan để làm ngữ cảnh bổ sung cho AI: ưu tiên FAQ cùng loại yêu cầu,
+// sau đó tới FAQ chung (không gắn loại yêu cầu cụ thể). Giới hạn số lượng để prompt gọn.
+function getRelevantFaqs(requestTypeId) {
+  return db
+    .prepare(
+      `SELECT question, answer FROM faq_entries
+       WHERE active = 1 AND (request_type_id = ? OR request_type_id IS NULL)
+       ORDER BY (request_type_id = ?) DESC, created_at DESC
+       LIMIT ?`
+    )
+    .all(requestTypeId, requestTypeId, MAX_RELEVANT_FAQS);
 }
 
 // Gợi ý khắc phục ban đầu từ AI (Gemini) — gọi ngay sau khi người gửi tạo yêu cầu thành công.
@@ -368,6 +427,7 @@ publicRouter.post(
         departmentName: request.department_name,
         requestTypeName: request.request_type_name,
         attachments: getAttachmentsFor(request.id),
+        relevantFaqs: getRelevantFaqs(request.request_type_id),
       });
       if (suggestion) {
         db.prepare('UPDATE requests SET ai_suggestion = ? WHERE id = ?').run(suggestion, request.id);
@@ -422,6 +482,7 @@ publicRouter.post(
         requestTypeName: request.request_type_name,
         attachments: getAttachmentsFor(request.id),
         previousSuggestion: request.ai_suggestion,
+        relevantFaqs: getRelevantFaqs(request.request_type_id),
       });
       if (suggestion) {
         db.prepare('UPDATE requests SET ai_alternative_suggestion = ? WHERE id = ?').run(suggestion, request.id);
@@ -481,6 +542,7 @@ publicRouter.post(
         attachments: getAttachmentsFor(request.id),
         history: Array.isArray(history) ? history.slice(-20) : [],
         userMessage: message.trim(),
+        relevantFaqs: getRelevantFaqs(request.request_type_id),
       });
       res.json({ reply });
     } catch (err) {

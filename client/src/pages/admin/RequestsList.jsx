@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
-import { StatusBadge, ProcessingTimeBadge } from '../../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge, PriorityBadge } from '../../components/StatusBadge.jsx';
 
 const TABS = [
   { value: '', label: 'Tất cả' },
@@ -18,11 +18,13 @@ export default function RequestsList() {
   const [status, setStatus] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [requestTypeId, setRequestTypeId] = useState('');
+  const [priorityId, setPriorityId] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
+  const [priorities, setPriorities] = useState([]);
   const [result, setResult] = useState({ data: [], total: 0, pageSize: 20 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +32,7 @@ export default function RequestsList() {
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => {});
     api.get('/request-types').then(setRequestTypes).catch(() => {});
+    api.get('/priorities').then(setPriorities).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export default function RequestsList() {
     if (status) params.set('status', status);
     if (departmentId) params.set('department_id', departmentId);
     if (requestTypeId) params.set('request_type_id', requestTypeId);
+    if (priorityId) params.set('priority_id', priorityId);
     if (q) params.set('q', q);
 
     api
@@ -46,7 +50,7 @@ export default function RequestsList() {
       .then(setResult)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [status, departmentId, requestTypeId, q, page]);
+  }, [status, departmentId, requestTypeId, priorityId, q, page]);
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
@@ -115,6 +119,21 @@ export default function RequestsList() {
             </option>
           ))}
         </select>
+        <select
+          value={priorityId}
+          onChange={(e) => {
+            setPriorityId(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+        >
+          <option value="">Tất cả mức độ ưu tiên</option>
+          {priorities.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {!loading && !error && result.data.length > 0 && (
@@ -150,14 +169,25 @@ export default function RequestsList() {
                   {new Date(r.created_at).toLocaleString('vi-VN')}
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <StatusBadge status={r.status} />
+                <PriorityBadge name={r.priority_name} />
                 <ProcessingTimeBadge name={r.processing_time_name} />
                 <span className="font-mono">{r.request_code}</span>
                 <span>· {r.department_name}</span>
                 {r.attachment_count > 0 && (
                   <span className="inline-flex items-center gap-1">
                     📎 {r.attachment_count}
+                  </span>
+                )}
+                {r.escalated_at && (
+                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-50 text-red-700">
+                    ⚠ Cần chú ý
+                  </span>
+                )}
+                {r.duplicate_of_code && (
+                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
+                    ⚠ Có thể trùng {r.duplicate_of_code}
                   </span>
                 )}
               </div>

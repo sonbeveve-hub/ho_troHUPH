@@ -23,6 +23,18 @@ CREATE TABLE IF NOT EXISTS processing_times (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Mức độ ưu tiên/khẩn cấp — danh mục do admin tự cấu hình (giống processing_times), KHÔNG
+-- phải enum cố định trong code. Trước đây hệ thống từng có 1 cột "priority" dạng enum cứng
+-- (gap/binh_thuong/khong_gap) nhưng đã được thay bằng processing_time_id để admin tự cấu
+-- hình được — bảng này tiếp tục theo đúng triết lý đó cho mức độ ưu tiên.
+CREATE TABLE IF NOT EXISTS priorities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  active INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS assignees (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -81,6 +93,8 @@ CREATE TABLE IF NOT EXISTS requests (
   confirmed_by TEXT,
   escalated_at TEXT,
   auto_closed_at TEXT,
+  priority_id INTEGER REFERENCES priorities(id),
+  possible_duplicate_of_id INTEGER REFERENCES requests(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -90,6 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_requests_type ON requests(request_type_id);
 -- idx_requests_processing_time được tạo trong migrate.js (sau khi đảm bảo cột
 -- processing_time_id tồn tại) để không phá vỡ nâng cấp từ schema cũ (còn cột priority).
 CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at);
+-- idx_requests_priority được tạo trong migrate.js (sau khi đảm bảo cột priority_id tồn tại)
+-- để không phá vỡ nâng cấp từ schema cũ, giống idx_requests_processing_time ở trên.
 
 CREATE TABLE IF NOT EXISTS request_status_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,3 +137,18 @@ CREATE TABLE IF NOT EXISTS email_log (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_request ON email_log(request_id);
+
+-- Cơ sở tri thức (FAQ) — đúc kết từ các yêu cầu đã xử lý phổ biến, hiển thị công khai và
+-- dùng làm ngữ cảnh bổ sung cho Trợ lý AI khi gợi ý khắc phục.
+CREATE TABLE IF NOT EXISTS faq_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  request_type_id INTEGER REFERENCES request_types(id) ON DELETE SET NULL,
+  source_request_id INTEGER REFERENCES requests(id) ON DELETE SET NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_faq_request_type ON faq_entries(request_type_id);
+CREATE INDEX IF NOT EXISTS idx_faq_active ON faq_entries(active);
