@@ -11,6 +11,9 @@ import {
   sendResolvedPendingEmail,
 } from '../services/email.service.js';
 import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
+import { logAudit, diffAndLog } from '../services/audit.service.js';
+
+const PRIORITY_VALUES = new Set(['P1', 'P2', 'P3', 'P4']);
 
 export const adminRequestsRouter = Router();
 adminRequestsRouter.use(requireAdmin);
@@ -29,14 +32,12 @@ const PAGE_SIZE = 20;
 const LIST_SELECT = `
   SELECT requests.*, departments.name AS department_name, request_types.name AS request_type_name,
          processing_times.name AS processing_time_name,
-         priorities.name AS priority_name, priorities.sort_order AS priority_sort_order,
          dup.request_code AS duplicate_of_code, dup.id AS duplicate_of_id,
          (SELECT COUNT(*) FROM request_attachments WHERE request_attachments.request_id = requests.id) AS attachment_count
   FROM requests
   LEFT JOIN departments ON departments.id = requests.department_id
   LEFT JOIN request_types ON request_types.id = requests.request_type_id
   LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
-  LEFT JOIN priorities ON priorities.id = requests.priority_id
   LEFT JOIN requests dup ON dup.id = requests.possible_duplicate_of_id
 `;
 
@@ -47,7 +48,7 @@ adminRequestsRouter.get(
       status,
       department_id: departmentId,
       request_type_id: requestTypeId,
-      priority_id: priorityId,
+      priority,
       assignee_email: assigneeEmail,
       q,
     } = req.query;
@@ -68,9 +69,9 @@ adminRequestsRouter.get(
       conditions.push('requests.request_type_id = ?');
       params.push(requestTypeId);
     }
-    if (priorityId) {
-      conditions.push('requests.priority_id = ?');
-      params.push(priorityId);
+    if (priority && PRIORITY_VALUES.has(priority)) {
+      conditions.push('requests.priority = ?');
+      params.push(priority);
     }
     if (assigneeEmail) {
       conditions.push('requests.assignee_email = ?');
@@ -87,13 +88,12 @@ adminRequestsRouter.get(
       .prepare(`SELECT COUNT(*) AS count FROM requests ${where}`)
       .get(...params).count;
 
-    // Sắp theo mức độ ưu tiên trước (sort_order nhỏ hơn = ưu tiên cao hơn, admin tự sắp xếp
-    // trong danh mục "Mức độ ưu tiên"), yêu cầu chưa gán mức độ xếp sau cùng; trong cùng mức
-    // độ thì mới nhất lên trước.
+    // Sắp theo mức độ ưu tiên trước (P1 < P4 theo thứ tự chữ, đúng thứ tự ưu tiên mong
+    // muốn); trong cùng mức độ thì mới nhất lên trước.
     const rows = db
       .prepare(
         `${LIST_SELECT} ${where}
-         ORDER BY COALESCE(priorities.sort_order, 999999) ASC, requests.created_at DESC
+         ORDER BY requests.priority ASC, requests.created_at DESC
          LIMIT ? OFFSET ?`
       )
       .all(...params, PAGE_SIZE, (page - 1) * PAGE_SIZE);
@@ -121,7 +121,17 @@ adminRequestsRouter.get(
       .prepare('SELECT id, original_name, mime_type, size_bytes, created_at FROM request_attachments WHERE request_id = ? ORDER BY created_at ASC')
       .all(req.params.id);
 
-    res.json({ ...request, history, emailLog, attachments });
+    const auditLog = db
+      .prepare(
+        `SELECT audit_logs.*, admin_users.full_name AS actor_name, admin_users.username AS actor_username
+         FROM audit_logs
+         LEFT JOIN admin_users ON admin_users.id = audit_logs.actor_id
+         WHERE audit_logs.request_id = ?
+         ORDER BY audit_logs.created_at ASC`
+      )
+      .all(req.params.id);
+
+    res.json({ ...request, history, emailLog, attachments, auditLog });
   })
 );
 
@@ -184,6 +194,15 @@ adminRequestsRouter.patch(
       'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
     ).run(req.params.id, status, note || null);
 
+    diffAndLog({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'status_change',
+      oldRow: request,
+      newRow: { status, admin_notes: note || null },
+      fields: ['status', 'admin_notes'],
+    });
+
     const updated = { ...request, status };
     const emailResult =
       status === 'resolved_pending'
@@ -234,6 +253,15 @@ adminRequestsRouter.patch(
       "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', ?)"
     ).run(req.params.id, note);
 
+    logAudit({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'confirm_on_behalf',
+      fieldName: 'status',
+      oldValue: request.status,
+      newValue: 'done',
+    });
+
     res.json({ ok: true });
   })
 );
@@ -273,51 +301,68 @@ adminRequestsRouter.patch(
       return res.status(400).json({ error: errors.join(' ') });
     }
 
+    const next = {
+      requester_name: String(requesterName).trim(),
+      department_id: Number(departmentId),
+      request_type_id: Number(requestTypeId),
+      processing_time_id: Number(processingTimeId),
+      requester_email: String(requesterEmail).trim(),
+      description: String(description).trim(),
+    };
+
     db.prepare(
       `UPDATE requests
        SET requester_name = ?, department_id = ?, request_type_id = ?, processing_time_id = ?,
            requester_email = ?, description = ?, updated_at = datetime('now')
        WHERE id = ?`
     ).run(
-      String(requesterName).trim(),
-      Number(departmentId),
-      Number(requestTypeId),
-      Number(processingTimeId),
-      String(requesterEmail).trim(),
-      String(description).trim(),
+      next.requester_name,
+      next.department_id,
+      next.request_type_id,
+      next.processing_time_id,
+      next.requester_email,
+      next.description,
       req.params.id
     );
+
+    diffAndLog({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'edit_info',
+      oldRow: existing,
+      newRow: next,
+      fields: ['requester_name', 'department_id', 'request_type_id', 'processing_time_id', 'requester_email', 'description'],
+    });
 
     res.json({ ok: true });
   })
 );
 
-// Đặt/đổi mức độ ưu tiên (dùng khi triage) — priorityId = null để bỏ gán.
+// Đặt/đổi mức độ ưu tiên (dùng khi triage, ghi đè giá trị tự động gán theo loại yêu cầu).
 adminRequestsRouter.patch(
   '/:id/priority',
   asyncHandler(async (req, res) => {
     const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
-    const { priorityId } = req.body || {};
-    let priorityName = null;
-    if (priorityId) {
-      const priority = db.prepare('SELECT id, name FROM priorities WHERE id = ?').get(priorityId);
-      if (!priority) return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
-      priorityName = priority.name;
+    const { priority } = req.body || {};
+    if (!PRIORITY_VALUES.has(priority)) {
+      return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
     }
 
-    db.prepare(
-      "UPDATE requests SET priority_id = ?, updated_at = datetime('now') WHERE id = ?"
-    ).run(priorityId || null, req.params.id);
-
-    db.prepare(
-      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
-    ).run(
-      req.params.id,
-      existing.status,
-      priorityName ? `Đổi mức độ ưu tiên thành: ${priorityName}` : 'Bỏ gán mức độ ưu tiên'
+    db.prepare("UPDATE requests SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(
+      priority,
+      req.params.id
     );
+
+    logAudit({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'priority_change',
+      fieldName: 'priority',
+      oldValue: existing.priority,
+      newValue: priority,
+    });
 
     res.json({ ok: true });
   })
@@ -344,6 +389,11 @@ adminRequestsRouter.patch(
 
     const nextStatus = existing.status === 'new' ? 'in_progress' : existing.status;
     const trimmedName = String(assigneeName).trim();
+    const next = {
+      assignee_name: trimmedName,
+      assignee_email: String(assigneeEmail).trim(),
+      assignee_phone: assigneePhone ? String(assigneePhone).trim() : null,
+    };
 
     db.prepare(
       `UPDATE requests
@@ -351,9 +401,9 @@ adminRequestsRouter.patch(
            status = ?, inprogress_reminder_sent_at = NULL, updated_at = datetime('now')
        WHERE id = ?`
     ).run(
-      trimmedName,
-      String(assigneeEmail).trim(),
-      assigneePhone ? String(assigneePhone).trim() : null,
+      next.assignee_name,
+      next.assignee_email,
+      next.assignee_phone,
       nextStatus,
       req.params.id
     );
@@ -361,6 +411,15 @@ adminRequestsRouter.patch(
     db.prepare(
       'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
     ).run(req.params.id, nextStatus, `Đã phân công cho ${trimmedName} xử lý`);
+
+    diffAndLog({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'assign',
+      oldRow: existing,
+      newRow: next,
+      fields: ['assignee_name', 'assignee_email', 'assignee_phone'],
+    });
 
     const updated = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
     const emailResult = await sendAssignmentEmails(updated);
@@ -372,8 +431,17 @@ adminRequestsRouter.patch(
 adminRequestsRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT id FROM requests WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, request_code, requester_name FROM requests WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
+
+    // Ghi audit TRƯỚC khi xoá — audit_logs.request_id có ON DELETE SET NULL nên dòng này vẫn
+    // còn lại sau khi requests bị xoá (chỉ mất liên kết request_id), giữ lại bằng chứng đã xoá.
+    logAudit({
+      actorId: req.session.adminId,
+      requestId: Number(req.params.id),
+      action: 'delete',
+      oldValue: `${existing.request_code} — ${existing.requester_name}`,
+    });
 
     db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
 

@@ -201,15 +201,71 @@ function migrateAddInprogressReminderColumn() {
   db.exec('ALTER TABLE requests ADD COLUMN inprogress_reminder_sent_at TEXT;');
 }
 
-// Thêm cột mức độ ưu tiên (FK tới bảng priorities mới) và cột đánh dấu "có thể trùng lặp"
-// (FK tự tham chiếu requests.id) — cả hai không nằm trong CHECK constraint nào.
-function migrateAddPriorityAndDuplicateColumns() {
+// Thêm cột đánh dấu "có thể trùng lặp" (FK tự tham chiếu requests.id) — không nằm trong
+// CHECK constraint nào nên chỉ cần ADD COLUMN đơn giản.
+function migrateAddDuplicateColumn() {
   const columns = db.prepare('PRAGMA table_info(requests)').all();
-  if (!columns.some((c) => c.name === 'priority_id')) {
-    db.exec('ALTER TABLE requests ADD COLUMN priority_id INTEGER REFERENCES priorities(id);');
+  if (columns.some((c) => c.name === 'possible_duplicate_of_id')) return;
+  db.exec('ALTER TABLE requests ADD COLUMN possible_duplicate_of_id INTEGER REFERENCES requests(id);');
+}
+
+// Giai đoạn 1 (đặc tả phát triển tiếp theo), Phần 3: thay bảng danh mục "priorities" (admin
+// tự đặt tên/thứ tự, gán tay từng ticket — mới thêm cùng ngày, chưa có dữ liệu thật) bằng
+// enum cố định P1–P4 trên chính bảng requests, tự động gán theo request_types.default_priority
+// lúc tạo yêu cầu. SQLite hỗ trợ ADD COLUMN kèm CHECK và DROP COLUMN trực tiếp (đã verify
+// bundled SQLite 3.49.2) nên không cần dựng lại bảng requests như các lần đổi CHECK trước đây.
+function migratePriorityEnum() {
+  const columns = db.prepare('PRAGMA table_info(requests)').all();
+  const hasNewPriority = columns.some((c) => c.name === 'priority');
+  const hasOldPriorityId = columns.some((c) => c.name === 'priority_id');
+
+  if (!hasNewPriority) {
+    db.exec(
+      "ALTER TABLE requests ADD COLUMN priority TEXT NOT NULL DEFAULT 'P3' CHECK (priority IN ('P1','P2','P3','P4'));"
+    );
   }
-  if (!columns.some((c) => c.name === 'possible_duplicate_of_id')) {
-    db.exec('ALTER TABLE requests ADD COLUMN possible_duplicate_of_id INTEGER REFERENCES requests(id);');
+  if (hasOldPriorityId) {
+    // Phải xoá index cũ trỏ vào priority_id trước — SQLite từ chối DROP COLUMN nếu còn
+    // index/trigger nào tham chiếu cột đó, và không tự xoá giúp.
+    db.exec('DROP INDEX IF EXISTS idx_requests_priority;');
+    db.exec('ALTER TABLE requests DROP COLUMN priority_id;');
+  }
+  db.exec('DROP TABLE IF EXISTS priorities;');
+
+  const typeColumns = db.prepare('PRAGMA table_info(request_types)').all();
+  if (!typeColumns.some((c) => c.name === 'default_priority')) {
+    db.exec(
+      "ALTER TABLE request_types ADD COLUMN default_priority TEXT NOT NULL DEFAULT 'P3' CHECK (default_priority IN ('P1','P2','P3','P4'));"
+    );
+  }
+}
+
+// Giai đoạn 1, Phần 1: tài khoản quản lý cá nhân hoá. Thêm cột role/status/email/... rồi
+// promote TOÀN BỘ tài khoản đã tồn tại trước migration lên super_admin — mọi tài khoản có
+// từ trước (dưới mô hình 1 mật khẩu dùng chung) mặc nhiên có toàn quyền, nên giữ nguyên
+// mức đó thay vì âm thầm hạ xuống 'admin' thường.
+function migrateAdminUserRoles() {
+  const columns = db.prepare('PRAGMA table_info(admin_users)').all();
+  if (columns.some((c) => c.name === 'role')) return; // đã migrate rồi
+
+  const preExistingIds = db.prepare('SELECT id FROM admin_users').all().map((r) => r.id);
+
+  db.exec(`
+    ALTER TABLE admin_users ADD COLUMN full_name TEXT;
+    ALTER TABLE admin_users ADD COLUMN email TEXT;
+    ALTER TABLE admin_users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin'));
+    ALTER TABLE admin_users ADD COLUMN status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled'));
+    ALTER TABLE admin_users ADD COLUMN last_login_at TEXT;
+  `);
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email) WHERE email IS NOT NULL;');
+
+  if (preExistingIds.length) {
+    const promote = db.prepare(
+      "UPDATE admin_users SET role = 'super_admin', full_name = COALESCE(full_name, 'Quản trị viên') WHERE id = ?"
+    );
+    db.transaction(() => {
+      preExistingIds.forEach((id) => promote.run(id));
+    })();
   }
 }
 
@@ -223,9 +279,11 @@ export function migrate() {
   migrateAddAiColumns();
   migrateConfirmationWorkflow();
   migrateAddInprogressReminderColumn();
-  migrateAddPriorityAndDuplicateColumns();
+  migrateAddDuplicateColumn();
+  migratePriorityEnum();
+  migrateAdminUserRoles();
   // Idempotent — bảo đảm các index này luôn tồn tại dù đi qua nhánh nào ở trên (cột có thể
   // vừa được ALTER TABLE thêm vào nên không đặt index này trong schema.sql).
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_priority ON requests(priority_id);');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_priority ON requests(priority);');
 }

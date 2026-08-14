@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client.js';
-import { StatusBadge, ProcessingTimeBadge, PriorityBadge } from '../../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'Mới tiếp nhận' },
@@ -19,6 +19,15 @@ const EMAIL_STATUS_LABEL = {
   skipped_no_config: 'Chưa cấu hình SMTP (bỏ qua)',
 };
 
+const AUDIT_ACTION_LABEL = {
+  status_change: 'Đổi trạng thái',
+  confirm_on_behalf: 'Xác nhận thay',
+  edit_info: 'Sửa thông tin',
+  assign: 'Phân công',
+  priority_change: 'Đổi mức độ ưu tiên',
+  delete: 'Xoá yêu cầu',
+};
+
 export default function RequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -31,7 +40,6 @@ export default function RequestDetail() {
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
   const [processingTimes, setProcessingTimes] = useState([]);
-  const [priorities, setPriorities] = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [savingPriority, setSavingPriority] = useState(false);
 
@@ -58,7 +66,6 @@ export default function RequestDetail() {
     api.get('/admin/departments').then(setDepartments);
     api.get('/admin/request-types').then(setRequestTypes);
     api.get('/admin/processing-times').then(setProcessingTimes);
-    api.get('/admin/priorities').then(setPriorities);
     api.get('/admin/assignees').then(setAssignees);
   }, []);
 
@@ -88,10 +95,10 @@ export default function RequestDetail() {
   };
 
   const handlePriorityChange = async (e) => {
-    const priorityId = e.target.value || null;
+    const priority = e.target.value;
     setSavingPriority(true);
     try {
-      await api.patch(`/admin/requests/${id}/priority`, { priorityId });
+      await api.patch(`/admin/requests/${id}/priority`, { priority });
       load();
     } finally {
       setSavingPriority(false);
@@ -322,7 +329,7 @@ export default function RequestDetail() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <StatusBadge status={request.status} />
-                <PriorityBadge name={request.priority_name} />
+                <PriorityBadge priority={request.priority} />
                 <ProcessingTimeBadge name={request.processing_time_name} />
                 <button onClick={startEdit} className="text-sm text-brand-600 hover:underline">
                   Sửa
@@ -358,15 +365,14 @@ export default function RequestDetail() {
                 <dt className="text-slate-400">Mức độ ưu tiên</dt>
                 <dd>
                   <select
-                    value={request.priority_id || ''}
+                    value={request.priority}
                     onChange={handlePriorityChange}
                     disabled={savingPriority}
                     className="rounded-lg border border-slate-200 bg-white/70 px-2 py-1 text-sm disabled:opacity-60"
                   >
-                    <option value="">-- Chưa gán --</option>
-                    {priorities.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
+                    {Object.entries(PRIORITY_META).map(([value, meta]) => (
+                      <option key={value} value={value}>
+                        {meta.label}
                       </option>
                     ))}
                   </select>
@@ -615,6 +621,7 @@ export default function RequestDetail() {
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         <h2 className="font-semibold text-slate-900 mb-3">Lịch sử trạng thái</h2>
+        <p className="text-xs text-slate-400 mb-3">Hiển thị cho người gửi xem tại trang tra cứu.</p>
         <ul className="space-y-2">
           {request.history.map((h) => (
             <li key={h.id} className="text-sm flex items-start gap-3">
@@ -627,6 +634,36 @@ export default function RequestDetail() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
+        <h2 className="font-semibold text-slate-900 mb-3">Lịch sử thao tác</h2>
+        <p className="text-xs text-slate-400 mb-3">Nhật ký nội bộ (audit log) — ai thao tác gì, khi nào. Chỉ admin xem được.</p>
+        {(!request.auditLog || request.auditLog.length === 0) ? (
+          <p className="text-sm text-slate-400">Chưa có thao tác nào được ghi nhận.</p>
+        ) : (
+          <ul className="space-y-2">
+            {request.auditLog.map((a) => (
+              <li key={a.id} className="text-sm flex items-start gap-3">
+                <span className="text-slate-400 w-40 shrink-0">
+                  {new Date(a.created_at).toLocaleString('vi-VN')}
+                </span>
+                <span className="text-slate-700">
+                  <span className="font-medium">{a.actor_name || a.actor_username || 'Hệ thống'}</span>
+                  {' — '}
+                  {AUDIT_ACTION_LABEL[a.action] || a.action}
+                  {a.field_name && <span className="text-slate-400"> ({a.field_name})</span>}
+                  {(a.old_value || a.new_value) && (
+                    <span className="text-slate-500">
+                      {': '}
+                      {a.old_value || '—'} → {a.new_value || '—'}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6">

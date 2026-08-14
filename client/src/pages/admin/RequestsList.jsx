@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client.js';
-import { StatusBadge, ProcessingTimeBadge, PriorityBadge } from '../../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
 
 const TABS = [
   { value: '', label: 'Tất cả' },
@@ -18,13 +18,12 @@ export default function RequestsList() {
   const [status, setStatus] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [requestTypeId, setRequestTypeId] = useState('');
-  const [priorityId, setPriorityId] = useState('');
+  const [priority, setPriority] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
-  const [priorities, setPriorities] = useState([]);
   const [result, setResult] = useState({ data: [], total: 0, pageSize: 20 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +31,6 @@ export default function RequestsList() {
   useEffect(() => {
     api.get('/departments').then(setDepartments).catch(() => {});
     api.get('/request-types').then(setRequestTypes).catch(() => {});
-    api.get('/priorities').then(setPriorities).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -42,7 +40,7 @@ export default function RequestsList() {
     if (status) params.set('status', status);
     if (departmentId) params.set('department_id', departmentId);
     if (requestTypeId) params.set('request_type_id', requestTypeId);
-    if (priorityId) params.set('priority_id', priorityId);
+    if (priority) params.set('priority', priority);
     if (q) params.set('q', q);
 
     api
@@ -50,7 +48,7 @@ export default function RequestsList() {
       .then(setResult)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [status, departmentId, requestTypeId, priorityId, q, page]);
+  }, [status, departmentId, requestTypeId, priority, q, page]);
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
@@ -120,17 +118,17 @@ export default function RequestsList() {
           ))}
         </select>
         <select
-          value={priorityId}
+          value={priority}
           onChange={(e) => {
-            setPriorityId(e.target.value);
+            setPriority(e.target.value);
             setPage(1);
           }}
           className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
         >
           <option value="">Tất cả mức độ ưu tiên</option>
-          {priorities.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+          {Object.entries(PRIORITY_META).map(([value, meta]) => (
+            <option key={value} value={value}>
+              {meta.label}
             </option>
           ))}
         </select>
@@ -171,7 +169,7 @@ export default function RequestsList() {
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <StatusBadge status={r.status} />
-                <PriorityBadge name={r.priority_name} />
+                <PriorityBadge priority={r.priority} />
                 <ProcessingTimeBadge name={r.processing_time_name} />
                 <span className="font-mono">{r.request_code}</span>
                 <span>· {r.department_name}</span>

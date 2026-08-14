@@ -12,22 +12,11 @@ CREATE TABLE IF NOT EXISTS request_types (
   description TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
+  default_priority TEXT NOT NULL DEFAULT 'P3' CHECK (default_priority IN ('P1','P2','P3','P4')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS processing_times (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  active INTEGER NOT NULL DEFAULT 1,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- Mức độ ưu tiên/khẩn cấp — danh mục do admin tự cấu hình (giống processing_times), KHÔNG
--- phải enum cố định trong code. Trước đây hệ thống từng có 1 cột "priority" dạng enum cứng
--- (gap/binh_thuong/khong_gap) nhưng đã được thay bằng processing_time_id để admin tự cấu
--- hình được — bảng này tiếp tục theo đúng triết lý đó cho mức độ ưu tiên.
-CREATE TABLE IF NOT EXISTS priorities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   active INTEGER NOT NULL DEFAULT 1,
@@ -60,8 +49,30 @@ CREATE TABLE IF NOT EXISTS admin_users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  full_name TEXT,
+  email TEXT,
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
+  last_login_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+-- idx_admin_users_email (UNIQUE, partial — cho phép nhiều NULL) được tạo trong migrate.js
+-- sau khi đảm bảo cột email tồn tại, giống idx_requests_processing_time/idx_requests_priority.
+
+-- Audit log field-level, append-only — không có route sửa/xoá cho bảng này.
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id INTEGER REFERENCES requests(id) ON DELETE SET NULL,
+  actor_id INTEGER REFERENCES admin_users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  field_name TEXT,
+  old_value TEXT,
+  new_value TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_request ON audit_logs(request_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 
 CREATE TABLE IF NOT EXISTS requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,7 +104,7 @@ CREATE TABLE IF NOT EXISTS requests (
   confirmed_by TEXT,
   escalated_at TEXT,
   auto_closed_at TEXT,
-  priority_id INTEGER REFERENCES priorities(id),
+  priority TEXT NOT NULL DEFAULT 'P3' CHECK (priority IN ('P1','P2','P3','P4')),
   possible_duplicate_of_id INTEGER REFERENCES requests(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

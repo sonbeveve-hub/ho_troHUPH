@@ -40,7 +40,7 @@ export default function AdminLogin({ onLoggedIn }) {
         >
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Tên đăng nhập
+              Email hoặc tên đăng nhập
             </label>
             <input
               value={username}

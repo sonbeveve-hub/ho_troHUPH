@@ -68,19 +68,6 @@ publicRouter.get(
   })
 );
 
-// Không dùng ở form gửi yêu cầu (mức độ ưu tiên do admin triage, không phải người gửi tự
-// chọn) — chỉ để trang danh sách admin tái sử dụng cùng endpoint công khai như các danh mục
-// khác, tránh phải phân biệt 2 kiểu gọi API cho cùng 1 việc "lấy danh sách để hiển thị bộ lọc".
-publicRouter.get(
-  '/priorities',
-  asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare('SELECT id, name FROM priorities WHERE active = 1 ORDER BY sort_order, id')
-      .all();
-    res.json(rows);
-  })
-);
-
 publicRouter.get(
   '/faq',
   asyncHandler(async (req, res) => {
@@ -168,7 +155,7 @@ publicRouter.post(
     if (!dept) errors.push('Khoa/phòng/đơn vị không hợp lệ.');
 
     const type = db
-      .prepare('SELECT id, name FROM request_types WHERE id = ? AND active = 1')
+      .prepare('SELECT id, name, default_priority FROM request_types WHERE id = ? AND active = 1')
       .get(requestTypeId);
     if (!type) errors.push('Loại yêu cầu không hợp lệ.');
 
@@ -197,8 +184,8 @@ publicRouter.post(
     const insert = db.prepare(`
       INSERT INTO requests
         (request_code, requester_name, department_id, request_type_id, processing_time_id,
-         description, requester_email, email_source, status, ip_address, possible_duplicate_of_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
+         description, requester_email, email_source, status, ip_address, possible_duplicate_of_id, priority)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)
     `);
 
     const info = insert.run(
@@ -211,7 +198,8 @@ publicRouter.post(
       String(requesterEmail).trim(),
       emailSource,
       req.ip || null,
-      possibleDuplicate ? possibleDuplicate.id : null
+      possibleDuplicate ? possibleDuplicate.id : null,
+      type.default_priority
     );
 
     const requestCode = `REQ-${String(info.lastInsertRowid).padStart(6, '0')}`;

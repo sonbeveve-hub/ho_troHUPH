@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
+import { logAudit, diffAndLog } from '../services/audit.service.js';
 
 export const adminFaqRouter = Router();
 adminFaqRouter.use(requireAdmin);
@@ -54,6 +55,14 @@ adminFaqRouter.post(
         sourceRequestId || null
       );
 
+    logAudit({
+      actorId: req.session.adminId,
+      requestId: sourceRequestId || null,
+      action: 'faq_change',
+      fieldName: 'faq_entries.created',
+      newValue: String(question).trim(),
+    });
+
     res.status(201).json({ id: info.lastInsertRowid });
   })
 );
@@ -82,6 +91,15 @@ adminFaqRouter.patch(
        WHERE id = ?`
     ).run(next.question, next.answer, next.requestTypeId, next.active, req.params.id);
 
+    diffAndLog({
+      actorId: req.session.adminId,
+      requestId: existing.source_request_id,
+      action: 'faq_change',
+      oldRow: { question: existing.question, answer: existing.answer, requestTypeId: existing.request_type_id, active: existing.active },
+      newRow: next,
+      fields: ['question', 'answer', 'requestTypeId', 'active'],
+    });
+
     res.json({ ok: true });
   })
 );
@@ -89,8 +107,15 @@ adminFaqRouter.patch(
 adminFaqRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
+    const existing = db.prepare('SELECT question FROM faq_entries WHERE id = ?').get(req.params.id);
     const info = db.prepare('DELETE FROM faq_entries WHERE id = ?').run(req.params.id);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
+    logAudit({
+      actorId: req.session.adminId,
+      action: 'faq_change',
+      fieldName: 'faq_entries.deleted',
+      oldValue: existing?.question,
+    });
     res.json({ ok: true });
   })
 );

@@ -11,11 +11,11 @@ import RequestDetail from './pages/admin/RequestDetail.jsx';
 import Departments from './pages/admin/Departments.jsx';
 import RequestTypes from './pages/admin/RequestTypes.jsx';
 import ProcessingTimes from './pages/admin/ProcessingTimes.jsx';
-import Priorities from './pages/admin/Priorities.jsx';
 import Staff from './pages/admin/Staff.jsx';
 import Assignees from './pages/admin/Assignees.jsx';
 import FaqList from './pages/admin/FaqList.jsx';
 import PublicFaq from './pages/PublicFaq.jsx';
+import AdminUsers from './pages/admin/AdminUsers.jsx';
 
 export default function App() {
   const [admin, setAdmin] = useState(undefined); // undefined = đang kiểm tra, null = chưa đăng nhập
@@ -59,10 +59,10 @@ export default function App() {
         <Route path="departments" element={<Departments />} />
         <Route path="request-types" element={<RequestTypes />} />
         <Route path="processing-times" element={<ProcessingTimes />} />
-        <Route path="priorities" element={<Priorities />} />
         <Route path="staff" element={<Staff />} />
         <Route path="assignees" element={<Assignees />} />
         <Route path="faq" element={<FaqList />} />
+        <Route path="users" element={<AdminUsers />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

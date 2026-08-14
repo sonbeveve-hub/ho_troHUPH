@@ -26,13 +26,21 @@ export function ProcessingTimeBadge({ name }) {
   );
 }
 
-export function PriorityBadge({ name }) {
-  if (!name) return null;
+const PRIORITY_META = {
+  P1: { label: 'P1 - Khẩn cấp', className: 'bg-red-50 text-red-700' },
+  P2: { label: 'P2 - Cao', className: 'bg-orange-50 text-orange-700' },
+  P3: { label: 'P3 - Bình thường', className: 'bg-blue-50 text-blue-700' },
+  P4: { label: 'P4 - Thấp', className: 'bg-slate-100 text-slate-500' },
+};
+
+export function PriorityBadge({ priority }) {
+  const meta = PRIORITY_META[priority];
+  if (!meta) return null;
   return (
-    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-rose-50 text-rose-700">
-      ⚑ {name}
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}>
+      ⚑ {meta.label}
     </span>
   );
 }
 
-export { STATUS_META };
+export { STATUS_META, PRIORITY_META };

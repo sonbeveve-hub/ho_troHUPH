@@ -11,6 +11,13 @@ const STATUS_LABELS = {
   rejected: 'Từ chối',
 };
 
+const PRIORITY_LABELS = {
+  P1: 'P1 - Khẩn cấp',
+  P2: 'P2 - Cao',
+  P3: 'P3 - Bình thường',
+  P4: 'P4 - Thấp',
+};
+
 export function getSummary() {
   const total = db.prepare('SELECT COUNT(*) AS count FROM requests').get().count;
 
@@ -174,14 +181,13 @@ export function buildStatsWorkbook() {
     .prepare(
       `SELECT requests.request_code, requests.requester_name, requests.requester_email,
               departments.name AS department_name, request_types.name AS request_type_name,
-              priorities.name AS priority_name, requests.status,
+              requests.priority, requests.status,
               requests.assignee_name, requests.assignee_email,
               requests.csat_rating, requests.reject_count,
               requests.created_at, requests.updated_at
        FROM requests
        LEFT JOIN departments ON departments.id = requests.department_id
        LEFT JOIN request_types ON request_types.id = requests.request_type_id
-       LEFT JOIN priorities ON priorities.id = requests.priority_id
        ORDER BY requests.created_at DESC`
     )
     .all();
@@ -198,7 +204,7 @@ export function buildStatsWorkbook() {
       r.requester_email,
       r.department_name || '',
       r.request_type_name || '',
-      r.priority_name || '',
+      PRIORITY_LABELS[r.priority] || r.priority,
       STATUS_LABELS[r.status] || r.status,
       r.assignee_name || '',
       r.assignee_email || '',

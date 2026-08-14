@@ -3,12 +3,14 @@ import multer from 'multer';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
+import { logAudit } from '../services/audit.service.js';
 import {
   importDepartmentsFromExcel,
   importRequestTypesFromExcel,
   importProcessingTimesFromExcel,
-  importPrioritiesFromExcel,
 } from '../services/excelImport.service.js';
+
+const PRIORITY_VALUES = new Set(['P1', 'P2', 'P3', 'P4']);
 
 export const adminCategoriesRouter = Router();
 adminCategoriesRouter.use(requireAdmin);
@@ -42,6 +44,12 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
           : db
               .prepare(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`)
               .run(String(name).trim(), nextSortOrder);
+        logAudit({
+          actorId: req.session.adminId,
+          action: 'category_change',
+          fieldName: `${table}.created`,
+          newValue: String(name).trim(),
+        });
         res.status(201).json({ id: info.lastInsertRowid });
       } catch (err) {
         if (String(err.message).includes('UNIQUE')) {
@@ -114,6 +122,18 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
           req.params.id
         );
       }
+      const changedFields = ['name', 'active', ...(hasDescription ? ['description'] : [])];
+      for (const field of changedFields) {
+        if (existing[field] !== next[field]) {
+          logAudit({
+            actorId: req.session.adminId,
+            action: 'category_change',
+            fieldName: `${table}.${field}`,
+            oldValue: existing[field],
+            newValue: next[field],
+          });
+        }
+      }
       res.json({ ok: true });
     })
   );
@@ -122,8 +142,15 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
     `${path}/:id`,
     asyncHandler(async (req, res) => {
       try {
+        const existing = db.prepare(`SELECT name FROM ${table} WHERE id = ?`).get(req.params.id);
         const info = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(req.params.id);
         if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
+        logAudit({
+          actorId: req.session.adminId,
+          action: 'category_change',
+          fieldName: `${table}.deleted`,
+          oldValue: existing?.name,
+        });
         res.json({ ok: true });
       } catch (err) {
         if (String(err.message).includes('FOREIGN KEY')) {
@@ -168,10 +195,31 @@ registerCategoryRoutes(
   false,
   importProcessingTimesFromExcel
 );
-registerCategoryRoutes(
-  adminCategoriesRouter,
-  '/priorities',
-  'priorities',
-  false,
-  importPrioritiesFromExcel
+
+// Mức độ ưu tiên mặc định cho 1 loại yêu cầu (tự động gán khi có request mới thuộc loại
+// này) — field riêng của request_types, nằm ngoài registerCategoryRoutes dùng chung để
+// không phải sửa helper chung cho cả 3 danh mục khác.
+adminCategoriesRouter.patch(
+  '/request-types/:id/default-priority',
+  asyncHandler(async (req, res) => {
+    const { defaultPriority } = req.body || {};
+    if (!PRIORITY_VALUES.has(defaultPriority)) {
+      return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
+    }
+    const existing = db.prepare('SELECT * FROM request_types WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
+
+    db.prepare('UPDATE request_types SET default_priority = ? WHERE id = ?').run(
+      defaultPriority,
+      req.params.id
+    );
+    logAudit({
+      actorId: req.session.adminId,
+      action: 'category_change',
+      fieldName: 'request_types.default_priority',
+      oldValue: existing.default_priority,
+      newValue: defaultPriority,
+    });
+    res.json({ ok: true });
+  })
 );

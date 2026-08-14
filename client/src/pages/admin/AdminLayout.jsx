@@ -9,10 +9,13 @@ const NAV_ITEMS = [
   { to: '/admin/departments', label: 'Đơn vị', icon: DeptIcon },
   { to: '/admin/request-types', label: 'Loại yêu cầu', icon: TypeIcon },
   { to: '/admin/processing-times', label: 'Thời gian xử lý', icon: ClockIcon },
-  { to: '/admin/priorities', label: 'Mức độ ưu tiên', icon: PriorityIcon },
   { to: '/admin/staff', label: 'Nhân sự', icon: StaffIcon },
   { to: '/admin/assignees', label: 'Người phụ trách', icon: AssigneeIcon },
   { to: '/admin/faq', label: 'Cơ sở tri thức', icon: FaqIcon },
+];
+
+const SUPER_ADMIN_NAV_ITEMS = [
+  { to: '/admin/users', label: 'Quản lý tài khoản', icon: UsersIcon },
 ];
 
 export default function AdminLayout({ admin, onLoggedOut }) {
@@ -24,6 +27,8 @@ export default function AdminLayout({ admin, onLoggedOut }) {
     navigate('/admin/login');
   };
 
+  const navItems = admin?.role === 'super_admin' ? [...NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : NAV_ITEMS;
+
   return (
     <div className="min-h-screen flex gap-4 p-4">
       <OrganicBackdrop />
@@ -33,7 +38,7 @@ export default function AdminLayout({ admin, onLoggedOut }) {
         </div>
 
         <nav className="flex-1 space-y-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+          {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -54,10 +59,10 @@ export default function AdminLayout({ admin, onLoggedOut }) {
 
         <div className="border-t border-slate-100 pt-4 mt-4 flex items-center gap-2 px-2">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-semibold">
-            {admin?.username?.[0]?.toUpperCase() || 'A'}
+            {(admin?.fullName || admin?.username)?.[0]?.toUpperCase() || 'A'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 truncate">{admin?.username}</p>
+            <p className="text-sm font-medium text-slate-900 truncate">{admin?.fullName || admin?.username}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -132,11 +137,12 @@ function AssigneeIcon(props) {
     </svg>
   );
 }
-function PriorityIcon(props) {
+function UsersIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <path d="M12 2 L12 14 M12 2 L18 6 L12 10 Z" />
-      <path d="M12 14v8" />
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16.5 4.5a3 3 0 0 1 0 6M20 20c0-2.6-1.6-4.4-4-5.1" />
     </svg>
   );
 }
