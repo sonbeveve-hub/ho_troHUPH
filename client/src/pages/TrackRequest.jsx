@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
@@ -24,6 +24,8 @@ const SORT_OPTIONS = [
 export default function TrackRequest() {
   const { code: codeParam } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const autoConfirm = searchParams.get('confirm') === '1';
   const [q, setQ] = useState(codeParam || '');
   const [results, setResults] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
@@ -148,15 +150,21 @@ export default function TrackRequest() {
         )}
 
         {sortedResults?.map((request) => (
-          <RequestDetailCard key={request.request_code} request={request} onUpdate={updateResult} />
+          <RequestDetailCard
+            key={request.request_code}
+            request={request}
+            onUpdate={updateResult}
+            autoConfirm={autoConfirm}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function RequestDetailCard({ request, onUpdate }) {
+function RequestDetailCard({ request, onUpdate, autoConfirm }) {
   const [confirming, setConfirming] = useState(false);
+  const [autoConfirmed, setAutoConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [rating, setRating] = useState(0);
   const [rejecting, setRejecting] = useState(false);
@@ -177,6 +185,17 @@ function RequestDetailCard({ request, onUpdate }) {
       setConfirming(false);
     }
   };
+
+  // Xác nhận "1 chạm" từ link trong email (?confirm=1): tự gọi API ngay khi trang tải xong,
+  // không bắt người dùng bấm lại nút. Chỉ tự bấm 1 lần — điều kiện requester_confirmed_at
+  // chặn việc gọi lại sau khi đã xác nhận (kể cả khi reload lại đúng link đó).
+  useEffect(() => {
+    if (autoConfirm && request.status === 'resolved_pending' && !request.requester_confirmed_at) {
+      setAutoConfirmed(true);
+      handleConfirm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConfirm, request.status, request.requester_confirmed_at]);
 
   const handleReject = async () => {
     if (rejectReason.trim().length < 3) {
@@ -280,6 +299,10 @@ function RequestDetailCard({ request, onUpdate }) {
         ) : request.status === 'reopened' ? (
           <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
             Yêu cầu đã được mở lại và Trung tâm đang tiếp tục xử lý. Bạn sẽ được thông báo khi có cập nhật mới.
+          </p>
+        ) : autoConfirmed && confirming ? (
+          <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+            Đang xác nhận từ liên kết trong email...
           </p>
         ) : request.status === 'resolved_pending' ? (
           <div>

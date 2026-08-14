@@ -11,6 +11,14 @@ export function trackingUrl(request) {
   return `${env.appUrl}/tra-cuu/${request.request_code}`;
 }
 
+// Link xác nhận "1 chạm": trang tra cứu đọc query ?confirm=1 và tự gọi API xác nhận ngay khi
+// tải xong, thay vì bắt người dùng bấm lại nút "Xác nhận" lần nữa trên trang. Chỉ dùng cho 2
+// email có hành động xác nhận (đã xử lý xong / nhắc xác nhận) — các email khác vẫn trỏ tới
+// trang tra cứu thường (trackingUrl), không tự thực hiện hành động gì.
+export function confirmUrl(request) {
+  return `${trackingUrl(request)}?confirm=1`;
+}
+
 // 'default' (xanh thương hiệu) cho các email thông thường, 'urgent' (đỏ) để làm nổi bật các
 // email cần chú ý gấp (ví dụ yêu cầu bị từ chối nhiều lần). Không dùng ảnh PNG dựng sẵn cho
 // phần hero như cách làm thủ công trong Gmail Templates — vì đây là email HTML thật gửi qua
@@ -57,11 +65,23 @@ export function trackingCta(request, label = 'Xem chi tiết yêu cầu', tone =
   return ctaButton(trackingUrl(request), label, tone);
 }
 
+// Nút CTA xác nhận "1 chạm" — trỏ tới confirmUrl() thay vì trackingUrl() thường.
+export function confirmCta(request, label = 'Xác nhận ngay', tone = 'default') {
+  return ctaButton(confirmUrl(request), label, tone);
+}
+
 // Liên kết dạng chữ đặt dưới nút CTA — dự phòng cho trường hợp nút không hiển thị được (một
 // số mail client cũ), và để người dùng có thể dán thẳng URL nếu cần.
-export function trackingLinkFallback(request) {
-  const url = trackingUrl(request);
+export function linkFallback(url) {
   return `<p style="text-align:center; color:#9CA3AF; font-size:12px; margin:2px 0 0; font-family:Arial,sans-serif;">Hoặc dán liên kết này vào trình duyệt:<br/><a href="${escapeHtml(url)}" style="color:#6B7280;">${escapeHtml(url)}</a></p>`;
+}
+
+export function trackingLinkFallback(request) {
+  return linkFallback(trackingUrl(request));
+}
+
+export function confirmLinkFallback(request) {
+  return linkFallback(confirmUrl(request));
 }
 
 export const EMAIL_FOOTER = `
@@ -69,13 +89,30 @@ export const EMAIL_FOOTER = `
   <p style="color:#9CA3AF; font-size:12px; margin:0;">Đây là email tự động, vui lòng không trả lời trực tiếp email này.</p>
 `;
 
-// Khung chung cho mọi email: banner hero màu thương hiệu ở đầu (icon + nhãn ngắn + tiêu đề),
-// thân nội dung trong khối bo góc trắng, canh giữa 600px — thay cho div đơn giản trước đây.
+// Logo trường đặt trên nền trắng riêng (không đè lên banner màu) vì bản thân logo có chữ màu
+// xanh thương hiệu — đặt trực tiếp lên banner gradient cùng tông sẽ mất độ tương phản.
+function emailLogoBar() {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+      <tr>
+        <td style="padding: 20px 32px 4px; text-align:center;">
+          <img src="${env.appUrl}/email-logo.png" width="200" alt="Trường Đại học Y tế Công cộng" style="display:inline-block; width:200px; max-width:60%; height:auto; border:0;" />
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+// Khung chung cho mọi email: logo trường + banner hero màu thương hiệu ở đầu (icon + nhãn
+// ngắn + tiêu đề), thân nội dung trong khối bo góc trắng, canh giữa 600px.
 export function emailLayout({ eyebrow, title, tone = 'default', bodyHtml }) {
   return `
     <div style="background-color:#F3F4F6; padding: 28px 12px; font-family: Arial, sans-serif;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto; background-color:#ffffff; border-radius:16px; border:1px solid #E5E7EB;">
-        <tr><td style="border-radius:16px 16px 0 0; overflow:hidden;">${emailHero({ eyebrow, title, tone })}</td></tr>
+        <tr><td style="border-radius:16px 16px 0 0; overflow:hidden;">
+          ${emailLogoBar()}
+          ${emailHero({ eyebrow, title, tone })}
+        </td></tr>
         <tr><td style="padding: 28px 32px 32px; font-size:14px; color:#1f2937; line-height:1.6;">${bodyHtml}</td></tr>
       </table>
       <p style="text-align:center; color:#9CA3AF; font-size:11px; margin:16px 0 0; font-family:Arial,sans-serif;">Trung tâm Tin học — hotrohuph.site</p>
