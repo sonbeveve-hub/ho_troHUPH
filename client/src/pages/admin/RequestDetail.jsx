@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faTriangleExclamation, faRobot, faArrowLeft, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleCheck,
+  faTriangleExclamation,
+  faRobot,
+  faArrowLeft,
+  faStar as faStarSolid,
+  faInbox,
+  faUserGear,
+  faHourglassHalf,
+  faCircleXmark,
+  faRotateLeft,
+  faChevronDown,
+  faChevronUp,
+} from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
@@ -41,6 +54,89 @@ const AUDIT_ACTION_LABEL = {
   delete: 'Xoá yêu cầu',
 };
 
+// 4 bước chính của quy trình xử lý. "reopened" thuộc bước "Đang xử lý" (quay lại xử lý sau khi
+// người gửi báo chưa khắc phục được); "rejected" nằm ngoài quy trình nên không có bước riêng —
+// hiển thị bằng banner thay cho thanh bước.
+const STEP_DEFS = [
+  { key: 'new', label: 'Tiếp nhận', icon: faInbox },
+  { key: 'in_progress', label: 'Đang xử lý', icon: faUserGear },
+  { key: 'resolved_pending', label: 'Chờ xác nhận', icon: faHourglassHalf },
+  { key: 'done', label: 'Hoàn thành', icon: faCircleCheck },
+];
+
+function getStepIndex(status) {
+  if (status === 'new') return 0;
+  if (status === 'in_progress' || status === 'reopened') return 1;
+  if (status === 'resolved_pending') return 2;
+  if (status === 'done' || status === 'done_auto') return 3;
+  return -1;
+}
+
+function RequestStepper({ status }) {
+  if (status === 'rejected') {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl bg-red-50 border border-red-200 px-5 py-4 mb-5">
+        <FontAwesomeIcon icon={faCircleXmark} className="text-red-500 text-xl shrink-0" />
+        <div>
+          <p className="font-semibold text-red-700 text-sm">Yêu cầu đã bị từ chối</p>
+          <p className="text-xs text-red-500">Nằm ngoài quy trình xử lý thông thường.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const current = getStepIndex(status);
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-start">
+        {STEP_DEFS.map((step, i) => {
+          const isDone = i < current;
+          const isCurrent = i === current;
+          return (
+            <div key={step.key} className={`flex items-center ${i < STEP_DEFS.length - 1 ? 'flex-1' : ''}`}>
+              <div className="flex flex-col items-center gap-1.5 shrink-0 w-16">
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center text-sm transition ${
+                    isDone
+                      ? 'bg-brand-500 text-white'
+                      : isCurrent
+                        ? 'bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/30 ring-4 ring-brand-100'
+                        : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={isDone ? faCircleCheck : step.icon} />
+                </div>
+                <span
+                  className={`text-[11px] font-medium text-center leading-tight ${
+                    isCurrent ? 'text-brand-700' : isDone ? 'text-slate-600' : 'text-slate-400'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {i < STEP_DEFS.length - 1 && (
+                <div className={`h-0.5 flex-1 -mt-5 rounded ${isDone ? 'bg-brand-400' : 'bg-slate-200'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {status === 'reopened' && (
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-3 py-1">
+          <FontAwesomeIcon icon={faRotateLeft} />
+          Người gửi báo chưa khắc phục được — yêu cầu đã mở lại
+        </div>
+      )}
+      {status === 'done_auto' && (
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
+          Tự động đóng do người gửi không phản hồi trong thời hạn
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -66,6 +162,13 @@ export default function RequestDetail() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignError, setAssignError] = useState('');
   const [assignMessage, setAssignMessage] = useState('');
+  const [showReassignForm, setShowReassignForm] = useState(false);
+
+  const [stepNote, setStepNote] = useState('');
+  const [stepSaving, setStepSaving] = useState(false);
+  const [stepMessage, setStepMessage] = useState('');
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const load = () => {
     api.get(`/admin/requests/${id}`).then((data) => {
@@ -125,6 +228,7 @@ export default function RequestDetail() {
       assigneeEmail: request.assignee_email || '',
       assigneePhone: request.assignee_phone || '',
     });
+    setShowReassignForm(false);
   }, [request?.id]);
 
   const [confirmingOnBehalf, setConfirmingOnBehalf] = useState(false);
@@ -155,6 +259,34 @@ export default function RequestDetail() {
       setMessage(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Hành động nhanh gắn với đúng bước hiện tại (vd: "Đánh dấu đã xử lý"), tách state (stepNote/
+  // stepMessage) riêng khỏi form "Thao tác khác" bên dưới để 2 khu vực không tranh nội dung ghi chú.
+  const quickUpdate = async (newStatus, requireNote) => {
+    if (requireNote && !stepNote.trim()) {
+      setStepMessage('Vui lòng mô tả giải pháp/nguyên nhân.');
+      return;
+    }
+    setStepSaving(true);
+    setStepMessage('');
+    try {
+      const res = await api.patch(`/admin/requests/${id}`, { status: newStatus, note: stepNote });
+      setStepMessage(
+        res.emailSent
+          ? 'Đã cập nhật và gửi email cho người yêu cầu.'
+          : res.emailReason === 'unchanged'
+            ? 'Đã lưu ghi chú.'
+            : 'Đã cập nhật (email chưa được gửi — kiểm tra cấu hình SMTP).'
+      );
+      setStepNote('');
+      setStatus(newStatus);
+      load();
+    } catch (err) {
+      setStepMessage(err.message);
+    } finally {
+      setStepSaving(false);
     }
   };
 
@@ -217,6 +349,7 @@ export default function RequestDetail() {
           ? 'Đã phân công — đã gửi email cho người yêu cầu (CC người phụ trách).'
           : 'Đã phân công — email chưa gửi được, kiểm tra cấu hình SMTP.'
       );
+      setShowReassignForm(false);
       load();
     } catch (err) {
       setAssignError(err.message);
@@ -237,6 +370,96 @@ export default function RequestDetail() {
   };
 
   if (!request) return <p className="text-slate-400 text-sm">Đang tải...</p>;
+
+  const stepIndex = getStepIndex(request.status);
+  const assigneePicker = assignees.length > 0 && (
+    <div>
+      <label className="block text-xs text-slate-400 mb-1">Chọn từ danh sách người phụ trách</label>
+      <select
+        defaultValue=""
+        onChange={(e) => {
+          const picked = assignees.find((a) => String(a.id) === e.target.value);
+          if (picked) {
+            setAssignForm({
+              assigneeName: picked.name,
+              assigneeEmail: picked.email,
+              assigneePhone: picked.phone || '',
+            });
+          }
+          e.target.value = '';
+        }}
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+      >
+        <option value="">-- Chọn người phụ trách --</option>
+        {assignees
+          .filter((a) => a.active)
+          .map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name} ({a.email})
+            </option>
+          ))}
+      </select>
+    </div>
+  );
+
+  const assignFormBlock = (
+    <form onSubmit={handleAssign} className="space-y-3">
+      {assigneePicker}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Họ và tên</label>
+          <input
+            value={assignForm.assigneeName}
+            onChange={(e) => setAssignForm((f) => ({ ...f, assigneeName: e.target.value }))}
+            placeholder="Người phụ trách xử lý"
+            className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Email</label>
+          <input
+            type="email"
+            value={assignForm.assigneeEmail}
+            onChange={(e) => setAssignForm((f) => ({ ...f, assigneeEmail: e.target.value }))}
+            placeholder="mail@huph.edu.vn"
+            className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Số điện thoại (tuỳ chọn)</label>
+        <input
+          value={assignForm.assigneePhone}
+          onChange={(e) => setAssignForm((f) => ({ ...f, assigneePhone: e.target.value }))}
+          className="w-full sm:w-1/2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+        />
+      </div>
+      {assignError && <p className="text-sm text-red-600">{assignError}</p>}
+      {assignMessage && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+          {assignMessage}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={assignSaving}
+          className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
+        >
+          {assignSaving ? 'Đang lưu...' : request.assignee_name ? 'Cập nhật phân công & gửi email' : 'Phân công & gửi email'}
+        </button>
+        {stepIndex !== 0 && (
+          <button
+            type="button"
+            onClick={() => setShowReassignForm(false)}
+            className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            Huỷ
+          </button>
+        )}
+      </div>
+    </form>
+  );
 
   return (
     <div className="max-w-3xl">
@@ -415,11 +638,26 @@ export default function RequestDetail() {
               )}
               {request.assignee_name && (
                 <div className="col-span-2">
-                  <dt className="text-slate-400">Người xử lý</dt>
-                  <dd className="text-slate-800">
-                    {request.assignee_name} — {request.assignee_email}
-                    {request.assignee_phone ? ` — ${request.assignee_phone}` : ''}
-                  </dd>
+                  <dt className="text-slate-400 flex items-center justify-between">
+                    <span>Người xử lý</span>
+                    {!showReassignForm && stepIndex !== 0 && stepIndex !== -1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowReassignForm(true)}
+                        className="text-xs text-brand-600 hover:underline"
+                      >
+                        Đổi
+                      </button>
+                    )}
+                  </dt>
+                  {showReassignForm ? (
+                    <dd className="mt-2 rounded-2xl bg-slate-50 border border-slate-100 p-3">{assignFormBlock}</dd>
+                  ) : (
+                    <dd className="text-slate-800">
+                      {request.assignee_name} — {request.assignee_email}
+                      {request.assignee_phone ? ` — ${request.assignee_phone}` : ''}
+                    </dd>
+                  )}
                 </div>
               )}
               <div className="col-span-2">
@@ -536,145 +774,173 @@ export default function RequestDetail() {
         )}
       </div>
 
-      <form onSubmit={handleUpdate} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
-        <h2 className="font-semibold text-slate-900">Cập nhật tiến độ</h2>
-        <div className="flex gap-2">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
-          >
-            {/* Khi còn "Mới tiếp nhận", bỏ tuỳ chọn "Đang xử lý" khỏi đây — dùng form "Phân
-                công xử lý" bên dưới để chuyển sang Đang xử lý, tránh 2 form cùng gửi 2 email
-                riêng cho cùng 1 hành động "bắt đầu xử lý". */}
-            {STATUS_OPTIONS.filter((s) => !(request.status === 'new' && s.value === 'in_progress')).map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        {request.status === 'new' && (
-          <p className="text-xs text-slate-400">
-            Để bắt đầu xử lý, dùng form &quot;Phân công xử lý&quot; bên dưới — form đó tự chuyển
-            trạng thái sang Đang xử lý và gửi 1 email duy nhất.
+      <RequestStepper status={request.status} />
+
+      {/* Bước 1: Tiếp nhận — hành động chính là phân công người xử lý */}
+      {stepIndex === 0 && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
+          <h2 className="font-semibold text-slate-900 mb-1">Bước tiếp theo: Phân công xử lý</h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Chọn người phụ trách để bắt đầu xử lý — hệ thống tự chuyển sang &quot;Đang xử lý&quot; và gửi 1 email duy nhất.
           </p>
-        )}
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          placeholder={
-            status === 'resolved_pending'
-              ? 'Mô tả giải pháp/nguyên nhân (bắt buộc) — sẽ gửi kèm email yêu cầu người gửi xác nhận...'
-              : 'Ghi chú gửi kèm cho người yêu cầu (tuỳ chọn)...'
-          }
-          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
-        />
-        {message && (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
-            {message}
+          {assignFormBlock}
+        </div>
+      )}
+
+      {/* Bước 2: Đang xử lý — hành động chính là đánh dấu đã xử lý xong (chuyển sang chờ xác nhận) */}
+      {stepIndex === 1 && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
+          <h2 className="font-semibold text-slate-900">Bước tiếp theo: Cập nhật tiến độ</h2>
+          <p className="text-xs text-slate-400">
+            Đánh dấu đã xử lý khi có giải pháp — email chờ xác nhận sẽ được gửi cho người yêu cầu. Hoặc chỉ lưu ghi chú tiến độ nếu chưa xong.
+          </p>
+          <textarea
+            value={stepNote}
+            onChange={(e) => setStepNote(e.target.value)}
+            rows={3}
+            placeholder="Mô tả giải pháp/nguyên nhân hoặc ghi chú tiến độ..."
+            className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+          />
+          {stepMessage && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+              {stepMessage}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => quickUpdate('resolved_pending', true)}
+              disabled={stepSaving}
+              className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
+            >
+              {stepSaving ? 'Đang lưu...' : 'Đánh dấu đã xử lý — chờ xác nhận'}
+            </button>
+            <button
+              type="button"
+              onClick={() => quickUpdate(request.status, false)}
+              disabled={stepSaving}
+              className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+            >
+              Lưu ghi chú (chưa xong)
+            </button>
           </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
-          >
-            {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
-          </button>
-          {request.status === 'resolved_pending' && (
+        </div>
+      )}
+
+      {/* Bước 3: Chờ xác nhận — hành động chính là chờ hoặc xác nhận thay khi cần */}
+      {stepIndex === 2 && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
+          <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+            <FontAwesomeIcon icon={faHourglassHalf} className="text-amber-500" />
+            Đang chờ người gửi xác nhận
+          </h2>
+          <p className="text-xs text-slate-400">
+            Hệ thống sẽ tự nhắc nhở và tự đóng nếu người gửi không phản hồi trong thời hạn. Chỉ dùng &quot;Xác nhận thay&quot; khi
+            người gửi vắng mặt hoặc không thể tự thao tác — cần ghi rõ lý do.
+          </p>
+          {confirmOnBehalfError && <p className="text-sm text-red-600">{confirmOnBehalfError}</p>}
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleConfirmOnBehalf}
               disabled={confirmingOnBehalf}
               className="rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-60"
-              title="Dùng khi người gửi vắng mặt/không thể tự xác nhận — chỉ khả dụng sau khi đã gửi nhắc nhở, và cần ghi rõ lý do"
             >
               {confirmingOnBehalf ? 'Đang xác nhận...' : 'Xác nhận thay người gửi'}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Chuyển lại yêu cầu về trạng thái "Đang xử lý"?')) quickUpdate('in_progress', false);
+              }}
+              disabled={stepSaving}
+              className="rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+            >
+              Quay lại đang xử lý
+            </button>
+          </div>
+          {stepMessage && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+              {stepMessage}
+            </div>
           )}
         </div>
-        {confirmOnBehalfError && (
-          <p className="text-sm text-red-600">{confirmOnBehalfError}</p>
-        )}
-      </form>
+      )}
 
-      <form onSubmit={handleAssign} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
-        <h2 className="font-semibold text-slate-900">Phân công xử lý</h2>
-        {assignees.length > 0 && (
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Chọn từ danh sách người phụ trách</label>
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                const picked = assignees.find((a) => String(a.id) === e.target.value);
-                if (picked) {
-                  setAssignForm({
-                    assigneeName: picked.name,
-                    assigneeEmail: picked.email,
-                    assigneePhone: picked.phone || '',
-                  });
-                }
-                e.target.value = '';
-              }}
-              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
-            >
-              <option value="">-- Chọn người phụ trách --</option>
-              {assignees
-                .filter((a) => a.active)
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.email})
+      {/* Bước 4: Hoàn thành — chỉ hiển thị tổng kết, không cần hành động thêm */}
+      {stepIndex === 3 && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
+          <h2 className="font-semibold text-slate-900 flex items-center gap-2 mb-1">
+            <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500" />
+            Yêu cầu đã hoàn thành
+          </h2>
+          <p className="text-xs text-slate-400">
+            {request.csat_rating
+              ? 'Người gửi đã đánh giá trải nghiệm hỗ trợ — xem điểm ở mục "Xác nhận từ người gửi" phía trên.'
+              : 'Người gửi chưa gửi đánh giá trải nghiệm hỗ trợ (không bắt buộc).'}
+          </p>
+        </div>
+      )}
+
+      <div className="mb-5">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="text-sm text-slate-500 hover:text-slate-800 inline-flex items-center gap-1.5"
+        >
+          <FontAwesomeIcon icon={showAdvanced ? faChevronUp : faChevronDown} className="text-xs" />
+          Thao tác khác (đổi trạng thái thủ công)
+        </button>
+        {showAdvanced && (
+          <form
+            onSubmit={handleUpdate}
+            className="mt-3 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 space-y-3"
+          >
+            <p className="text-xs text-slate-400">
+              Dùng khi cần bỏ qua quy trình chuẩn — vd. từ chối yêu cầu, ép chuyển trạng thái, mở lại thủ công.
+            </p>
+            <div className="flex gap-2">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+              >
+                {/* Khi còn "Mới tiếp nhận", bỏ tuỳ chọn "Đang xử lý" khỏi đây — dùng form "Phân
+                    công xử lý" ở bước 1 để chuyển sang Đang xử lý, tránh 2 form cùng gửi 2 email
+                    riêng cho cùng 1 hành động "bắt đầu xử lý". */}
+                {STATUS_OPTIONS.filter((s) => !(request.status === 'new' && s.value === 'in_progress')).map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
                   </option>
                 ))}
-            </select>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Họ và tên</label>
-            <input
-              value={assignForm.assigneeName}
-              onChange={(e) => setAssignForm((f) => ({ ...f, assigneeName: e.target.value }))}
-              placeholder="Người phụ trách xử lý"
+              </select>
+            </div>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder={
+                status === 'resolved_pending'
+                  ? 'Mô tả giải pháp/nguyên nhân (bắt buộc) — sẽ gửi kèm email yêu cầu người gửi xác nhận...'
+                  : 'Ghi chú gửi kèm cho người yêu cầu (tuỳ chọn)...'
+              }
               className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
             />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Email</label>
-            <input
-              type="email"
-              value={assignForm.assigneeEmail}
-              onChange={(e) => setAssignForm((f) => ({ ...f, assigneeEmail: e.target.value }))}
-              placeholder="mail@huph.edu.vn"
-              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Số điện thoại (tuỳ chọn)</label>
-          <input
-            value={assignForm.assigneePhone}
-            onChange={(e) => setAssignForm((f) => ({ ...f, assigneePhone: e.target.value }))}
-            className="w-full sm:w-1/2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
-          />
-        </div>
-        {assignError && <p className="text-sm text-red-600">{assignError}</p>}
-        {assignMessage && (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
-            {assignMessage}
-          </div>
+            {message && (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+                {message}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
+            >
+              {saving ? 'Đang lưu...' : 'Lưu & gửi email'}
+            </button>
+          </form>
         )}
-        <button
-          type="submit"
-          disabled={assignSaving}
-          className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 shadow-md shadow-brand-500/20 px-4 py-2 text-sm font-semibold text-white hover:shadow-lg hover:shadow-brand-500/30 disabled:opacity-60"
-        >
-          {assignSaving ? 'Đang lưu...' : request.assignee_name ? 'Cập nhật phân công & gửi email' : 'Phân công & gửi email'}
-        </button>
-      </form>
+      </div>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         <h2 className="font-semibold text-slate-900 mb-3">Lịch sử trạng thái</h2>
