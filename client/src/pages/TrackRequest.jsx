@@ -122,7 +122,7 @@ export default function TrackRequest() {
           <div className="mb-4">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-balance bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
             Tra cứu yêu cầu hỗ trợ
           </h1>
           <p className="mt-2 text-slate-600 dark:text-ash">

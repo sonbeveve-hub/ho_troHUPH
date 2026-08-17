@@ -45,7 +45,7 @@ export default function PublicFaq() {
           <div className="mb-5">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-balance bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
             Câu hỏi thường gặp
           </h1>
           <p className="mt-3 text-slate-600 dark:text-ash">

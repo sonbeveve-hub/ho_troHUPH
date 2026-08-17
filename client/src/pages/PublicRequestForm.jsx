@@ -185,7 +185,7 @@ export default function PublicRequestForm() {
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
           <h1
-            className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper animate-fade-in-up"
+            className="text-3xl sm:text-5xl font-bold tracking-tight text-balance bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper animate-fade-in-up"
             style={{ animationDelay: '80ms' }}
           >
             Hỗ trợ IT, nhanh và minh bạch

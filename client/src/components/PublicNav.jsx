@@ -15,7 +15,7 @@ export default function PublicNav() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="sticky top-0 z-10 mb-6 -mx-4 px-4 py-2 bg-white/70 backdrop-blur-xl border-b border-white/60 dark:bg-ink/80 dark:border-white/10">
+    <nav className="sticky top-0 z-20 mb-6 -mx-4 px-4 py-2 bg-white/90 backdrop-blur-xl border-b border-white/60 dark:bg-ink/95 dark:border-white/10">
       <div className="max-w-5xl mx-auto flex items-center justify-center gap-1">
         {LINKS.map(({ to, label, icon }) => {
           const active = to === '/' ? pathname === '/' : pathname.startsWith(to);
