@@ -1,16 +1,28 @@
 import { Router } from 'express';
+import bcrypt from 'bcrypt';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { requireAdmin, requireFullAdmin } from '../middleware/requireAdmin.js';
+import { requireAdmin, requireFullAdmin, requireSuperAdmin } from '../middleware/requireAdmin.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
 
 export const adminAssigneesRouter = Router();
 adminAssigneesRouter.use(requireAdmin, requireFullAdmin);
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Tài khoản đăng nhập của người phụ trách được xác định bằng cách khớp email
+// (assignees.email = admin_users.username) — cùng cách làm với staff, tránh phải đồng bộ 2 nơi.
 adminAssigneesRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = db.prepare('SELECT * FROM assignees ORDER BY name').all();
+    const rows = db
+      .prepare(
+        `SELECT assignees.*, admin_users.role AS account_role, admin_users.status AS account_status
+         FROM assignees
+         LEFT JOIN admin_users ON admin_users.username = assignees.email
+         ORDER BY assignees.name`
+      )
+      .all();
     res.json(rows);
   })
 );
@@ -93,6 +105,113 @@ adminAssigneesRouter.delete(
       fieldName: 'assignees.deleted',
       oldValue: existing?.name,
     });
+    res.json({ ok: true });
+  })
+);
+
+// Cấp tài khoản đăng nhập cho người phụ trách — dùng đúng email trong danh sách làm username.
+// Chỉ super_admin (tạo tài khoản/đặt mật khẩu là thao tác nhạy cảm, giống hệt /admin/staff).
+adminAssigneesRouter.post(
+  '/:id/grant-account',
+  requireSuperAdmin,
+  asyncHandler(async (req, res) => {
+    const assignee = db.prepare('SELECT * FROM assignees WHERE id = ?').get(req.params.id);
+    if (!assignee) return res.status(404).json({ error: 'Không tìm thấy người phụ trách.' });
+    if (!assignee.email || !EMAIL_RE.test(assignee.email)) {
+      return res.status(400).json({ error: 'Người phụ trách cần có email hợp lệ trước khi cấp tài khoản.' });
+    }
+
+    const { role, password } = req.body || {};
+    if (!['super_admin', 'admin', 'handler'].includes(role)) {
+      return res.status(400).json({ error: 'Vai trò không hợp lệ.' });
+    }
+    if (!password || String(password).length < 8) {
+      return res.status(400).json({ error: 'Mật khẩu cần ít nhất 8 ký tự.' });
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    try {
+      const info = db
+        .prepare(
+          `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
+           VALUES (?, ?, ?, ?, ?, 'active')`
+        )
+        .run(assignee.email, passwordHash, assignee.name, assignee.email, role);
+
+      logAudit({
+        actorId: req.session.adminId,
+        action: 'user_create',
+        newValue: `${assignee.name} (${assignee.email}, ${role}) — cấp từ danh sách người phụ trách #${assignee.id}`,
+      });
+
+      res.status(201).json({ id: info.lastInsertRowid });
+    } catch (err) {
+      if (String(err.message).includes('UNIQUE')) {
+        return res.status(409).json({ error: 'Email này đã có tài khoản đăng nhập.' });
+      }
+      throw err;
+    }
+  })
+);
+
+// Sửa vai trò/trạng thái/mật khẩu của tài khoản đã cấp cho người phụ trách — khớp qua email.
+adminAssigneesRouter.patch(
+  '/:id/account',
+  requireSuperAdmin,
+  asyncHandler(async (req, res) => {
+    const assignee = db.prepare('SELECT * FROM assignees WHERE id = ?').get(req.params.id);
+    if (!assignee) return res.status(404).json({ error: 'Không tìm thấy người phụ trách.' });
+    if (!assignee.email) return res.status(400).json({ error: 'Người phụ trách chưa có email.' });
+
+    const account = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(assignee.email);
+    if (!account) return res.status(404).json({ error: 'Người phụ trách này chưa có tài khoản đăng nhập.' });
+
+    const { role, status, password } = req.body || {};
+    if (role !== undefined && !['super_admin', 'admin', 'handler'].includes(role)) {
+      return res.status(400).json({ error: 'Vai trò không hợp lệ.' });
+    }
+    if (status !== undefined && !['active', 'disabled'].includes(status)) {
+      return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
+    }
+    if (password !== undefined && String(password).length < 8) {
+      return res.status(400).json({ error: 'Mật khẩu cần ít nhất 8 ký tự.' });
+    }
+    if (account.id === req.session.adminId && status === 'disabled') {
+      return res.status(400).json({ error: 'Không thể tự khoá tài khoản đang đăng nhập.' });
+    }
+
+    const next = {
+      role: role !== undefined ? role : account.role,
+      status: status !== undefined ? status : account.status,
+    };
+
+    if (password) {
+      const passwordHash = await bcrypt.hash(String(password), 10);
+      db.prepare('UPDATE admin_users SET role = ?, status = ?, password_hash = ? WHERE id = ?').run(
+        next.role,
+        next.status,
+        passwordHash,
+        account.id
+      );
+    } else {
+      db.prepare('UPDATE admin_users SET role = ?, status = ? WHERE id = ?').run(
+        next.role,
+        next.status,
+        account.id
+      );
+    }
+
+    diffAndLog({
+      actorId: req.session.adminId,
+      action: 'user_update',
+      oldRow: { role: account.role, status: account.status },
+      newRow: next,
+      fields: ['role', 'status'],
+    });
+    if (password) {
+      logAudit({ actorId: req.session.adminId, action: 'user_password_reset', newValue: assignee.email });
+    }
+
     res.json({ ok: true });
   })
 );
