@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -15,6 +16,8 @@ import {
   faUserShield,
   faRightFromBracket,
   faClockRotateLeft,
+  faBars,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import OrganicBackdrop from '../../components/OrganicBackdrop.jsx';
@@ -47,6 +50,9 @@ const SUPER_ADMIN_NAV_ITEMS = [
 export default function AdminLayout({ admin, onLoggedOut }) {
   const navigate = useNavigate();
   const [theme, toggleTheme] = useTheme('hotro-admin-theme');
+  // Sidebar cố định w-60 không vừa màn hình < 1024px — dưới ngưỡng lg, sidebar chuyển thành
+  // drawer trượt vào từ trái, mở/đóng bằng nút hamburger ở thanh trên cùng riêng cho mobile.
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await api.post('/admin/logout', {});
@@ -57,18 +63,48 @@ export default function AdminLayout({ admin, onLoggedOut }) {
   const baseItems =
     admin?.role === 'handler' ? NAV_ITEMS.filter((item) => !item.fullAdminOnly) : NAV_ITEMS;
   const navItems = admin?.role === 'super_admin' ? [...baseItems, ...SUPER_ADMIN_NAV_ITEMS] : baseItems;
+  const logoSrc = theme === 'dark' ? `/logo-dark.svg?filetime=${FILE_TIME}` : `/logo.svg?filetime=${FILE_TIME}`;
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <div className="min-h-screen flex gap-4 p-4 dark:bg-ink transition-colors duration-300">
+    <div className="min-h-screen lg:flex gap-4 p-4 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
-      <aside className="relative z-10 w-60 shrink-0 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 flex flex-col py-6 px-4 h-[calc(100vh-2rem)] sticky top-4">
-        <div className="flex items-center px-2 mb-8">
-          <img
-            src={theme === 'dark' ? `/logo-dark.svg?filetime=${FILE_TIME}` : `/logo.svg?filetime=${FILE_TIME}`}
-            alt="Trung tâm Tin học"
-            className="h-9 w-auto"
-          />
+
+      {/* Thanh trên cùng chỉ hiện dưới lg — thay cho sidebar không đủ chỗ trên màn hình nhỏ */}
+      <div className="lg:hidden relative z-10 flex items-center justify-between bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-emerald-900/5 border border-white/60 px-4 py-3 mb-4">
+        <img src={logoSrc} alt="Trung tâm Tin học" className="h-7 w-auto" />
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Mở menu điều hướng"
+          className="h-9 w-9 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-50"
+        >
+          <FontAwesomeIcon icon={faBars} />
+        </button>
+      </div>
+
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-4 left-4 z-30 w-64 transition-transform duration-300 ease-out
+                    lg:relative lg:inset-auto lg:z-10 lg:w-60 lg:sticky lg:top-4 lg:translate-x-0
+                    ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-[120%] lg:translate-x-0'}
+                    shrink-0 bg-white/95 lg:bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 flex flex-col py-6 px-4 h-[calc(100vh-2rem)]`}
+      >
+        <div className="flex items-center justify-between px-2 mb-8">
+          <img src={logoSrc} alt="Trung tâm Tin học" className="h-9 w-auto" />
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Đóng menu điều hướng"
+            className="lg:hidden h-8 w-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -77,6 +113,7 @@ export default function AdminLayout({ admin, onLoggedOut }) {
               key={to}
               to={to}
               end={end}
+              onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-full px-3.5 py-2 text-sm font-medium transition ${
                   isActive
@@ -102,14 +139,15 @@ export default function AdminLayout({ admin, onLoggedOut }) {
           <button
             onClick={handleLogout}
             title="Đăng xuất"
-            className="text-slate-400 hover:text-slate-700"
+            aria-label="Đăng xuất"
+            className="text-slate-500 hover:text-slate-700"
           >
             <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
           </button>
         </div>
       </aside>
 
-      <main className="relative z-10 flex-1 py-2 pr-2 overflow-x-hidden">
+      <main className="relative z-10 flex-1 py-2 lg:pr-2 overflow-x-hidden">
         <Outlet />
       </main>
     </div>

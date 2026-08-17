@@ -7,6 +7,7 @@ import StatusBreakdown from '../../components/charts/StatusBreakdown.jsx';
 import CategoryBar from '../../components/charts/CategoryBar.jsx';
 import TimeSeries from '../../components/charts/TimeSeries.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
+import { StatsPageSkeleton } from '../../components/Skeleton.jsx';
 import { useTheme } from '../../hooks/useTheme.js';
 
 const STATUS_LABEL = {
@@ -48,7 +49,7 @@ export default function Stats() {
   if (error) {
     return <p className="text-sm text-red-600">Không tải được thống kê: {error}</p>;
   }
-  if (!summary) return <p className="text-slate-400 text-sm">Đang tải...</p>;
+  if (!summary) return <StatsPageSkeleton />;
 
   const statusCounts = Object.fromEntries(summary.byStatus.map((s) => [s.status, s.count]));
 
@@ -171,7 +172,7 @@ function ConfirmationStats({ stats }) {
         </div>
 
         <div>
-          <p className="text-xs text-slate-400 mb-2">Phân bố đánh giá CSAT</p>
+          <p className="text-xs text-slate-500 mb-2">Phân bố đánh giá CSAT</p>
           <div className="space-y-1.5">
             {[5, 4, 3, 2, 1].map((star) => {
               const count = ratingMap[star] || 0;
@@ -184,7 +185,7 @@ function ConfirmationStats({ stats }) {
                   <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                     <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>
+                  <span className="w-6 text-right text-slate-500 shrink-0">{count}</span>
                 </div>
               );
             })}
@@ -210,7 +211,7 @@ function AiFeedbackStats({ stats }) {
       </h2>
 
       {totalSuggested === 0 ? (
-        <p className="text-sm text-slate-400">Chưa có yêu cầu nào được AI phân tích.</p>
+        <p className="text-sm text-slate-500">Chưa có yêu cầu nào được AI phân tích.</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-5">
           <div className="grid grid-cols-2 gap-3">
@@ -239,7 +240,7 @@ function AiFeedbackStats({ stats }) {
           </div>
 
           <div>
-            <p className="text-xs text-slate-400 mb-2">Phân bố đánh giá sao</p>
+            <p className="text-xs text-slate-500 mb-2">Phân bố đánh giá sao</p>
             <div className="space-y-1.5">
               {[5, 4, 3, 2, 1].map((star) => {
                 const count = ratingMap[star] || 0;
@@ -252,7 +253,7 @@ function AiFeedbackStats({ stats }) {
                     <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                       <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>
+                    <span className="w-6 text-right text-slate-500 shrink-0">{count}</span>
                   </div>
                 );
               })}
@@ -272,7 +273,7 @@ function MiniStat({ label, value, sub, dotClass }) {
         {label}
       </p>
       <p className="mt-0.5 text-lg font-semibold text-slate-900">{value}</p>
-      {sub && <p className="text-[11px] text-slate-400">{sub}</p>}
+      {sub && <p className="text-[11px] text-slate-500">{sub}</p>}
     </div>
   );
 }
@@ -317,12 +318,12 @@ function AssigneeProgress({ rows }) {
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-400">Chưa có dữ liệu.</p>
+        <p className="text-sm text-slate-500">Chưa có dữ liệu.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-slate-500 border-b border-slate-100">
                 <th className="py-2 pr-3 font-medium">Người phụ trách</th>
                 <th className="py-2 px-3 font-medium text-right">Tổng</th>
                 <th className="py-2 px-3 font-medium text-right">Mới</th>
@@ -338,7 +339,7 @@ function AssigneeProgress({ rows }) {
                 <tr key={r.assignee_email || 'unassigned'} className="border-b border-slate-50 last:border-0">
                   <td className="py-2 pr-3 text-slate-800">
                     {r.assignee_name}
-                    {r.assignee_email && <span className="text-slate-400 text-xs ml-1">({r.assignee_email})</span>}
+                    {r.assignee_email && <span className="text-slate-500 text-xs ml-1">({r.assignee_email})</span>}
                   </td>
                   <td className="py-2 px-3 text-right font-medium text-slate-900">{r.total}</td>
                   <td className="py-2 px-3 text-right text-slate-500">{r.new_count}</td>
@@ -357,9 +358,9 @@ function AssigneeProgress({ rows }) {
       {filterEmail && (
         <div className="mt-4 border-t border-slate-100 pt-4">
           {loadingDrillDown ? (
-            <p className="text-sm text-slate-400">Đang tải...</p>
+            <p className="text-sm text-slate-500">Đang tải...</p>
           ) : drillDown.length === 0 ? (
-            <p className="text-sm text-slate-400">Không có yêu cầu nào.</p>
+            <p className="text-sm text-slate-500">Không có yêu cầu nào.</p>
           ) : (
             <div className="space-y-2">
               {drillDown.map((r) => (
@@ -370,7 +371,7 @@ function AssigneeProgress({ rows }) {
                 >
                   <div className="min-w-0">
                     <p className="text-sm text-slate-800 truncate">
-                      <span className="font-mono text-xs text-slate-400 mr-2">{r.request_code}</span>
+                      <span className="font-mono text-xs text-slate-500 mr-2">{r.request_code}</span>
                       {r.requester_name}
                     </p>
                   </div>

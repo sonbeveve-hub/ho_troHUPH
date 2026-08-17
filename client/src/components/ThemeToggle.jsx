@@ -14,8 +14,9 @@ export default function ThemeToggle({ theme, onToggle, variant = 'floating' }) {
         type="button"
         onClick={onToggle}
         title={title}
+        aria-label={title}
         className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition
-                   text-slate-400 hover:bg-white hover:text-slate-700
+                   text-slate-500 hover:bg-white hover:text-slate-700
                    dark:text-volt dark:hover:bg-white/10 dark:hover:text-volt"
       >
         <FontAwesomeIcon icon={isDark ? faSun : faMoon} />
@@ -28,6 +29,7 @@ export default function ThemeToggle({ theme, onToggle, variant = 'floating' }) {
       type="button"
       onClick={onToggle}
       title={title}
+      aria-label={title}
       className="fixed top-4 right-4 z-20 h-11 w-11 rounded-full flex items-center justify-center
                  bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg text-slate-600
                  hover:scale-105 active:scale-95 transition

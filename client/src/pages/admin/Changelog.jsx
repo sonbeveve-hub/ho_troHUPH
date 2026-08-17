@@ -99,7 +99,7 @@ export default function Changelog() {
           >
             <div className="flex items-baseline justify-between mb-2">
               <h2 className="font-bold text-slate-900">{v.version}</h2>
-              <span className="text-xs text-slate-400">{v.date}</span>
+              <span className="text-xs text-slate-500">{v.date}</span>
             </div>
             <ul className="space-y-1.5">
               {v.items.map((item, i) => (

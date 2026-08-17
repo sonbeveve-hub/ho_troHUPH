@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperclip, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faPaperclip, faTriangleExclamation, faInbox as faInboxIcon } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
+import EmptyState from '../../components/EmptyState.jsx';
+import { ListSkeleton } from '../../components/Skeleton.jsx';
 
 const TABS = [
   { value: '', label: 'Tất cả' },
@@ -195,18 +197,22 @@ export default function RequestsList() {
       </div>
 
       {!loading && !error && result.data.length > 0 && (
-        <p className="text-xs text-slate-400 mb-2">{result.total} yêu cầu</p>
+        <p className="text-xs text-slate-500 mb-2">{result.total} yêu cầu</p>
       )}
 
       {loading ? (
-        <p className="text-slate-400 text-sm">Đang tải...</p>
+        <ListSkeleton />
       ) : error ? (
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-red-900/5 border border-red-100/60 p-10 text-center text-red-600">
           Không tải được danh sách: {error}
         </div>
       ) : result.data.length === 0 ? (
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-10 text-center text-slate-400">
-          Không có yêu cầu nào phù hợp.
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60">
+          <EmptyState
+            icon={faInboxIcon}
+            title="Không có yêu cầu nào phù hợp"
+            description="Thử đổi bộ lọc hoặc từ khoá tìm kiếm."
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -223,7 +229,7 @@ export default function RequestsList() {
                   </p>
                   <p className="mt-1 text-sm text-slate-500 line-clamp-2">{r.description}</p>
                 </div>
-                <span className="shrink-0 text-xs text-slate-400">
+                <span className="shrink-0 text-xs text-slate-500">
                   {new Date(r.created_at).toLocaleString('vi-VN')}
                 </span>
               </div>

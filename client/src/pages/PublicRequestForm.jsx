@@ -7,10 +7,12 @@ import StaffEmailField from '../components/form/StaffEmailField.jsx';
 import ImagePicker from '../components/form/ImagePicker.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ChatWidget from '../components/ChatWidget.jsx';
+import PreChatWidget from '../components/PreChatWidget.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
 import StatCounter from '../components/StatCounter.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import PublicLogo from '../components/PublicLogo.jsx';
+import PublicNav from '../components/PublicNav.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import {
   LaptopIllustration,
@@ -157,7 +159,7 @@ export default function PublicRequestForm() {
               Gửi yêu cầu khác <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
             </button>
             <p className="mt-4">
-              <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 dark:text-volt hover:underline">
+              <Link to={`/tra-cuu/${success}`} className="text-sm text-brand-600 dark:text-paper hover:underline">
                 Xem tình trạng xử lý
               </Link>
             </p>
@@ -174,15 +176,16 @@ export default function PublicRequestForm() {
     <div className="min-h-screen px-4 pb-16 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      <PublicNav />
 
       {/* ===== Hero ===== */}
-      <div className="relative z-10 max-w-5xl mx-auto pt-12 sm:pt-16">
+      <div className="relative z-10 max-w-5xl mx-auto pt-4 sm:pt-8">
         <div className="text-center max-w-2xl mx-auto">
           <div className="mb-6 animate-fade-in-up">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
           <h1
-            className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent animate-fade-in-up"
+            className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper animate-fade-in-up"
             style={{ animationDelay: '80ms' }}
           >
             Hỗ trợ IT, nhanh và minh bạch
@@ -370,7 +373,7 @@ export default function PublicRequestForm() {
                 </button>
               ))}
               {processingTimes.length === 0 && (
-                <p className="text-sm text-slate-400 dark:text-ash">Chưa có tuỳ chọn nào, vui lòng liên hệ quản trị viên.</p>
+                <p className="text-sm text-slate-500 dark:text-ash">Chưa có tuỳ chọn nào, vui lòng liên hệ quản trị viên.</p>
               )}
             </div>
           </div>
@@ -412,17 +415,19 @@ export default function PublicRequestForm() {
 
         <p className="mt-4 text-center text-sm text-slate-700 dark:text-paper font-medium">
           Đã gửi yêu cầu trước đó?{' '}
-          <Link to="/tra-cuu" className="text-brand-700 dark:text-volt font-semibold hover:underline">
+          <Link to="/tra-cuu" className="text-brand-700 dark:text-paper font-semibold hover:underline">
             Tra cứu tình trạng xử lý
           </Link>
         </p>
         <p className="mt-2 text-center text-sm text-slate-700 dark:text-paper font-medium">
-          <Link to="/faq" className="text-brand-700 dark:text-volt font-semibold hover:underline">
+          <Link to="/faq" className="text-brand-700 dark:text-paper font-semibold hover:underline">
             Xem câu hỏi thường gặp
           </Link>
         </p>
-        <p className="mt-2 text-center text-xs text-slate-400 dark:text-ash">Phiên bản v{APP_VERSION}</p>
+        <p className="mt-2 text-center text-xs text-slate-500 dark:text-ash">Phiên bản v{APP_VERSION}</p>
       </ScrollReveal>
+
+      <PreChatWidget />
     </div>
     </div>
   );

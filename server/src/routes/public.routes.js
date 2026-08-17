@@ -6,7 +6,12 @@ import { lookupStaff } from '../services/staffLookup.service.js';
 import { submitRequestLimiter, trackRequestLimiter, aiLimiter, aiChatLimiter } from '../middleware/rateLimit.js';
 import { saveRequestAttachments } from '../services/attachments.service.js';
 import { sendSubmissionConfirmationEmail, sendReopenedNotificationEmail, sendCsatRequestEmail } from '../services/email.service.js';
-import { getInitialSuggestion, getAlternativeSuggestion, getChatReply } from '../services/ai.service.js';
+import {
+  getInitialSuggestion,
+  getAlternativeSuggestion,
+  getChatReply,
+  getPreSubmitChatReply,
+} from '../services/ai.service.js';
 import { findMostSimilarRequest } from '../services/similarity.service.js';
 import { isGeminiConfigured, env } from '../config/env.js';
 
@@ -590,6 +595,37 @@ publicRouter.post(
     } catch (err) {
       console.error('[ai] Lỗi khi gọi Gemini (chat):', err.message);
       res.json({ reply: null, error: true });
+    }
+  })
+);
+
+// Hỏi AI TRƯỚC KHI gửi yêu cầu — chưa có request nào được tạo, không cần mã yêu cầu. Dùng cho
+// widget "Hỏi AI trước khi gửi" ở trang chủ, giúp người dùng thử tự khắc phục trước khi quyết
+// định có cần điền form gửi yêu cầu chính thức hay không.
+publicRouter.post(
+  '/ai-presubmit-chat',
+  aiChatLimiter,
+  asyncHandler(async (req, res) => {
+    const { message, history } = req.body || {};
+    if (typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập nội dung.' });
+    }
+    if (message.length > 1000) {
+      return res.status(400).json({ error: 'Nội dung quá dài.' });
+    }
+    if (!isGeminiConfigured()) {
+      return res.json({ reply: null, configured: false });
+    }
+
+    try {
+      const reply = await getPreSubmitChatReply({
+        history: Array.isArray(history) ? history.slice(-20) : [],
+        userMessage: message.trim(),
+      });
+      res.json({ reply, configured: true });
+    } catch (err) {
+      console.error('[ai] Lỗi khi gọi Gemini (pre-submit chat):', err.message);
+      res.json({ reply: null, configured: true, error: true });
     }
   })
 );

@@ -93,7 +93,7 @@ export default function SlaRules() {
             ))}
           </select>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Số ngày nhắc nhở</label>
+            <label className="block text-xs text-slate-500 mb-1">Số ngày nhắc nhở</label>
             <input
               type="number"
               min="1"
@@ -103,7 +103,7 @@ export default function SlaRules() {
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Số ngày tự đóng</label>
+            <label className="block text-xs text-slate-500 mb-1">Số ngày tự đóng</label>
             <input
               type="number"
               min="1"
@@ -139,7 +139,7 @@ export default function SlaRules() {
                     onChange={(e) => setEditForm((f) => ({ ...f, reminderDays: e.target.value }))}
                     className="w-20 rounded-lg border border-slate-200 bg-white/70 px-2 py-1 text-sm"
                   />
-                  <span className="text-xs text-slate-400">ngày nhắc</span>
+                  <span className="text-xs text-slate-500">ngày nhắc</span>
                   <input
                     type="number"
                     min="1"
@@ -147,7 +147,7 @@ export default function SlaRules() {
                     onChange={(e) => setEditForm((f) => ({ ...f, timeoutDays: e.target.value }))}
                     className="w-20 rounded-lg border border-slate-200 bg-white/70 px-2 py-1 text-sm"
                   />
-                  <span className="text-xs text-slate-400">ngày đóng</span>
+                  <span className="text-xs text-slate-500">ngày đóng</span>
                   <button onClick={() => saveEdit(item.id)} className="text-brand-600 text-sm hover:underline">
                     Lưu
                   </button>
@@ -156,7 +156,7 @@ export default function SlaRules() {
                   </button>
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Nhắc sau {item.reminder_days} ngày làm việc · Tự đóng sau {item.timeout_days} ngày làm việc
                 </p>
               )}
@@ -173,7 +173,7 @@ export default function SlaRules() {
             )}
           </div>
         ))}
-        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-400">Chưa có rule nào.</p>}
+        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-500">Chưa có rule nào.</p>}
       </div>
     </div>
   );

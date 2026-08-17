@@ -79,12 +79,13 @@ body {
 .dark .hover\:text-slate-700:hover { color: #FCFCFC; }
 
 /* Chữ màu thương hiệu (link "Sửa", trạng thái đang chọn...) — xanh đậm brand-600/700 tương
-   phản quá thấp trên nền gần đen, đổi sang lime để vẫn đọc được rõ. NGOẠI TRỪ khi nằm trong
-   nút nền nhạt bg-brand-50 (vd. "Xác nhận thay người gửi") — nút đó tự đủ tương phản, đổi
-   sang lime sẽ ngược lại làm khó đọc (lime trên nền xanh nhạt). */
+   phản quá thấp trên nền gần đen. Dùng mint (màu phụ trong bộ màu chế độ tối) thay vì lime —
+   lime dành riêng cho nút CTA chính + số liệu nổi bật, không rải khắp mọi link/nhãn phụ để
+   tránh "chói" toàn trang. NGOẠI TRỪ khi nằm trong nút nền nhạt bg-brand-50 (vd. "Xác nhận
+   thay người gửi") — nút đó tự đủ tương phản, giữ nguyên màu gốc. */
 .dark .text-brand-500,
 .dark .text-brand-600,
-.dark .text-brand-700 { color: #B2EE37; }
+.dark .text-brand-700 { color: #58F670; }
 .dark .bg-brand-50.text-brand-700 { color: #146B42; }
 
 /* Ô nhập/lựa chọn không đặt màu chữ riêng (dựa vào color: inherit từ Tailwind preflight) —

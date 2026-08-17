@@ -6,7 +6,7 @@ export default function CategoryBar({ data, color = BRAND, theme }) {
   const rows = data.filter((d) => d.label).slice(0, 8);
 
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-400 dark:text-ash py-8 text-center">Chưa có dữ liệu.</p>;
+    return <p className="text-sm text-slate-500 dark:text-ash py-8 text-center">Chưa có dữ liệu.</p>;
   }
 
   const isDark = theme === 'dark';

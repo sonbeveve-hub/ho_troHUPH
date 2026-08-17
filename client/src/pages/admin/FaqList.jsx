@@ -98,7 +98,7 @@ export default function FaqList() {
       <form onSubmit={handleAdd} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5 mb-5 space-y-3">
         <h2 className="font-semibold text-slate-900">Thêm mới</h2>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Câu hỏi</label>
+          <label className="block text-xs text-slate-500 mb-1">Câu hỏi</label>
           <input
             value={form.question}
             onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))}
@@ -106,7 +106,7 @@ export default function FaqList() {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Câu trả lời</label>
+          <label className="block text-xs text-slate-500 mb-1">Câu trả lời</label>
           <textarea
             value={form.answer}
             onChange={(e) => setForm((f) => ({ ...f, answer: e.target.value }))}
@@ -115,7 +115,7 @@ export default function FaqList() {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Loại yêu cầu liên quan (tuỳ chọn)</label>
+          <label className="block text-xs text-slate-500 mb-1">Loại yêu cầu liên quan (tuỳ chọn)</label>
           <select
             value={form.requestTypeId}
             onChange={(e) => setForm((f) => ({ ...f, requestTypeId: e.target.value }))}
@@ -193,7 +193,7 @@ export default function FaqList() {
             ) : (
               <div>
                 <div className="flex items-start justify-between gap-3">
-                  <p className={item.active ? 'font-medium text-slate-900' : 'font-medium text-slate-400 line-through'}>
+                  <p className={item.active ? 'font-medium text-slate-900' : 'font-medium text-slate-500 line-through'}>
                     {item.question}
                   </p>
                   <div className="flex items-center gap-3 shrink-0 text-sm">
@@ -209,7 +209,7 @@ export default function FaqList() {
                   </div>
                 </div>
                 <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap">{item.answer}</p>
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="mt-2 text-xs text-slate-500">
                   {item.request_type_name || 'Áp dụng chung'}
                   {item.source_request_code && ` · Tạo từ ${item.source_request_code}`}
                 </p>
@@ -217,7 +217,7 @@ export default function FaqList() {
             )}
           </div>
         ))}
-        {items.length === 0 && <p className="px-5 py-8 text-sm text-slate-400">Chưa có mục FAQ nào.</p>}
+        {items.length === 0 && <p className="px-5 py-8 text-sm text-slate-500">Chưa có mục FAQ nào.</p>}
       </div>
     </div>
   );

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faHouse, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faFilter as faFilterIcon, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
-import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
+import { StatusBadge, ProcessingTimeBadge, STATUS_META } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import PublicLogo from '../components/PublicLogo.jsx';
+import PublicNav from '../components/PublicNav.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import { TicketIllustration, ClockIllustration } from '../components/illustrations.jsx';
 
@@ -39,6 +41,7 @@ export default function TrackRequest() {
   const [theme, toggleTheme] = useTheme();
   const [results, setResults] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
+  const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -64,6 +67,7 @@ export default function TrackRequest() {
     setLoading(true);
     setError('');
     setResults(null);
+    setStatusFilter('');
     try {
       const rows = await api.get(`/track/search?q=${encodeURIComponent(query)}`);
       if (rows.length === 0) {
@@ -85,7 +89,7 @@ export default function TrackRequest() {
 
   const sortedResults = useMemo(() => {
     if (!results) return null;
-    const copy = [...results];
+    const copy = (statusFilter ? results.filter((r) => r.status === statusFilter) : [...results]);
     if (sortBy === 'oldest') {
       copy.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     } else if (sortBy === 'status') {
@@ -94,7 +98,14 @@ export default function TrackRequest() {
       copy.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     return copy;
-  }, [results, sortBy]);
+  }, [results, sortBy, statusFilter]);
+
+  // Chỉ hiện các trạng thái THỰC SỰ có trong kết quả — tránh 1 dropdown liệt kê 7 trạng thái
+  // trong khi người dùng chỉ có 2 yêu cầu với 2 trạng thái.
+  const availableStatuses = useMemo(() => {
+    if (!results) return [];
+    return [...new Set(results.map((r) => r.status))];
+  }, [results]);
 
   const updateResult = (updated) => {
     setResults((prev) => prev.map((r) => (r.request_code === updated.request_code ? updated : r)));
@@ -105,20 +116,13 @@ export default function TrackRequest() {
     <div className="min-h-screen px-4 py-10 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      <PublicNav />
       <div className="relative z-10 max-w-xl mx-auto">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-slate-500 hover:text-brand-700 dark:text-ash dark:hover:text-volt transition"
-        >
-          <FontAwesomeIcon icon={faHouse} />
-          Về trang chủ
-        </Link>
-
         <div className="mb-2 text-center">
           <div className="mb-4">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
             Tra cứu yêu cầu hỗ trợ
           </h1>
           <p className="mt-2 text-slate-600 dark:text-ash">
@@ -162,24 +166,51 @@ export default function TrackRequest() {
           </div>
         )}
 
-        {sortedResults && sortedResults.length > 1 && (
-          <div className="mt-5 flex items-center justify-between gap-3">
+        {results && results.length > 1 && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-slate-500 dark:text-ash">{sortedResults.length} kết quả</p>
-            <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-ash">
-              Sắp xếp theo
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white/70 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:focus:ring-volt"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              {availableStatuses.length > 1 && (
+                <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-ash">
+                  Trạng thái
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white/70 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:focus:ring-volt"
+                  >
+                    <option value="">Tất cả</option>
+                    {availableStatuses.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_META[s]?.label || s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-ash">
+                Sắp xếp theo
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-white/70 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:focus:ring-volt"
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
+        )}
+
+        {results && results.length > 1 && sortedResults.length === 0 && (
+          <EmptyState
+            icon={faFilterIcon}
+            title="Không có yêu cầu nào khớp bộ lọc"
+            description="Thử chọn lại trạng thái khác."
+          />
         )}
 
         {sortedResults?.map((request) => (
@@ -290,7 +321,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
     <div className="mt-5 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 dark:bg-ink-2/80 dark:border-white/10 dark:shadow-black/30">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-slate-400 dark:text-ash font-mono">{request.request_code}</p>
+          <p className="text-xs text-slate-500 dark:text-ash font-mono">{request.request_code}</p>
           <h2 className="text-lg font-bold text-slate-900 dark:text-paper mt-1">{request.request_type_name}</h2>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -301,27 +332,27 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
-          <dt className="text-slate-400 dark:text-ash">Người gửi</dt>
+          <dt className="text-slate-500 dark:text-ash">Người gửi</dt>
           <dd className="text-slate-800 dark:text-paper">{request.requester_name}</dd>
         </div>
         <div>
-          <dt className="text-slate-400 dark:text-ash">Đơn vị</dt>
+          <dt className="text-slate-500 dark:text-ash">Đơn vị</dt>
           <dd className="text-slate-800 dark:text-paper">{request.department_name}</dd>
         </div>
         <div>
-          <dt className="text-slate-400 dark:text-ash">Thời gian gửi</dt>
+          <dt className="text-slate-500 dark:text-ash">Thời gian gửi</dt>
           <dd className="text-slate-800 dark:text-paper">{new Date(request.created_at).toLocaleString('vi-VN')}</dd>
         </div>
         {request.assignee_name && (
           <div>
-            <dt className="text-slate-400 dark:text-ash">Người phụ trách</dt>
+            <dt className="text-slate-500 dark:text-ash">Người phụ trách</dt>
             <dd className="text-slate-800 dark:text-paper">{request.assignee_name}</dd>
           </div>
         )}
       </dl>
 
       <div className="mt-4">
-        <dt className="text-slate-400 dark:text-ash text-sm">Mô tả</dt>
+        <dt className="text-slate-500 dark:text-ash text-sm">Mô tả</dt>
         <dd className="text-slate-800 dark:text-paper mt-1 whitespace-pre-wrap">{request.description}</dd>
       </div>
 
@@ -337,7 +368,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
         <ul className="space-y-2">
           {request.history.map((h, i) => (
             <li key={i} className="text-sm flex items-start gap-3">
-              <span className="text-slate-400 dark:text-ash w-36 shrink-0">
+              <span className="text-slate-500 dark:text-ash w-36 shrink-0">
                 {new Date(h.changed_at).toLocaleString('vi-VN')}
               </span>
               <span>
@@ -371,17 +402,17 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
             )}
 
             {request.csat_rating ? (
-              <p className="mt-1 text-sm text-amber-600 dark:text-volt flex items-center gap-1">
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <span>Đánh giá của bạn:</span>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <FontAwesomeIcon key={star} icon={star <= request.csat_rating ? faStarSolid : faStarRegular} />
                 ))}
               </p>
             ) : rateSubmitting ? (
-              <p className="mt-2 text-xs text-slate-400 dark:text-ash">Đang gửi đánh giá...</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-ash">Đang gửi đánh giá...</p>
             ) : (
               <div className="mt-2">
-                <p className="text-xs text-slate-400 dark:text-ash mb-1">Bạn hài lòng với kết quả hỗ trợ này không?</p>
+                <p className="text-xs text-slate-500 dark:text-ash mb-1">Bạn hài lòng với kết quả hỗ trợ này không?</p>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -458,7 +489,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
             )}
           </div>
         ) : (
-          <p className="text-sm text-slate-400 dark:text-ash">
+          <p className="text-sm text-slate-500 dark:text-ash">
             Yêu cầu sẽ có nút xác nhận sau khi Trung tâm hoàn tất xử lý.
           </p>
         )}

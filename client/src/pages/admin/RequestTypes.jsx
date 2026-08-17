@@ -50,7 +50,7 @@ function DefaultPriorityManager() {
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((item) => (
           <div key={item.id} className="px-4 py-3 flex items-center justify-between gap-3">
-            <span className={item.active ? 'text-slate-800' : 'text-slate-400 line-through'}>{item.name}</span>
+            <span className={item.active ? 'text-slate-800' : 'text-slate-500 line-through'}>{item.name}</span>
             <select
               value={item.default_priority}
               onChange={(e) => handleChange(item.id, e.target.value)}

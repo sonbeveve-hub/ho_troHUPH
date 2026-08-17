@@ -18,6 +18,7 @@ import {
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '../../components/StatusBadge.jsx';
+import { DetailPageSkeleton } from '../../components/Skeleton.jsx';
 
 function StarRow({ rating, max = 5 }) {
   return (
@@ -102,14 +103,14 @@ function RequestStepper({ status }) {
                       ? 'bg-brand-500 text-white'
                       : isCurrent
                         ? 'bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-md shadow-brand-500/30 ring-4 ring-brand-100'
-                        : 'bg-slate-100 text-slate-400'
+                        : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   <FontAwesomeIcon icon={isDone ? faCircleCheck : step.icon} />
                 </div>
                 <span
                   className={`text-[11px] font-medium text-center leading-tight ${
-                    isCurrent ? 'text-brand-700' : isDone ? 'text-slate-600' : 'text-slate-400'
+                    isCurrent ? 'text-brand-700' : isDone ? 'text-slate-600' : 'text-slate-500'
                   }`}
                 >
                   {step.label}
@@ -369,12 +370,12 @@ export default function RequestDetail() {
     }
   };
 
-  if (!request) return <p className="text-slate-400 text-sm">Đang tải...</p>;
+  if (!request) return <DetailPageSkeleton />;
 
   const stepIndex = getStepIndex(request.status);
   const assigneePicker = assignees.length > 0 && (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">Chọn từ danh sách người phụ trách</label>
+      <label className="block text-xs text-slate-500 mb-1">Chọn từ danh sách người phụ trách</label>
       <select
         defaultValue=""
         onChange={(e) => {
@@ -407,7 +408,7 @@ export default function RequestDetail() {
       {assigneePicker}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Họ và tên</label>
+          <label className="block text-xs text-slate-500 mb-1">Họ và tên</label>
           <input
             value={assignForm.assigneeName}
             onChange={(e) => setAssignForm((f) => ({ ...f, assigneeName: e.target.value }))}
@@ -416,7 +417,7 @@ export default function RequestDetail() {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Email</label>
+          <label className="block text-xs text-slate-500 mb-1">Email</label>
           <input
             type="email"
             value={assignForm.assigneeEmail}
@@ -427,7 +428,7 @@ export default function RequestDetail() {
         </div>
       </div>
       <div>
-        <label className="block text-xs text-slate-400 mb-1">Số điện thoại (tuỳ chọn)</label>
+        <label className="block text-xs text-slate-500 mb-1">Số điện thoại (tuỳ chọn)</label>
         <input
           value={assignForm.assigneePhone}
           onChange={(e) => setAssignForm((f) => ({ ...f, assigneePhone: e.target.value }))}
@@ -472,7 +473,7 @@ export default function RequestDetail() {
         {editing ? (
           <form onSubmit={saveEdit} className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Họ tên người gửi</label>
+              <label className="block text-xs text-slate-500 mb-1">Họ tên người gửi</label>
               <input
                 value={editForm.requesterName}
                 onChange={(e) => setEditForm((f) => ({ ...f, requesterName: e.target.value }))}
@@ -481,7 +482,7 @@ export default function RequestDetail() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Đơn vị</label>
+                <label className="block text-xs text-slate-500 mb-1">Đơn vị</label>
                 <select
                   value={editForm.departmentId}
                   onChange={(e) => setEditForm((f) => ({ ...f, departmentId: e.target.value }))}
@@ -495,7 +496,7 @@ export default function RequestDetail() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Loại yêu cầu</label>
+                <label className="block text-xs text-slate-500 mb-1">Loại yêu cầu</label>
                 <select
                   value={editForm.requestTypeId}
                   onChange={(e) => setEditForm((f) => ({ ...f, requestTypeId: e.target.value }))}
@@ -511,7 +512,7 @@ export default function RequestDetail() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Thời gian xử lý mong muốn</label>
+                <label className="block text-xs text-slate-500 mb-1">Thời gian xử lý mong muốn</label>
                 <select
                   value={editForm.processingTimeId}
                   onChange={(e) => setEditForm((f) => ({ ...f, processingTimeId: e.target.value }))}
@@ -525,7 +526,7 @@ export default function RequestDetail() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Email</label>
+                <label className="block text-xs text-slate-500 mb-1">Email</label>
                 <input
                   type="email"
                   value={editForm.requesterEmail}
@@ -535,7 +536,7 @@ export default function RequestDetail() {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Mô tả</label>
+              <label className="block text-xs text-slate-500 mb-1">Mô tả</label>
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
@@ -565,7 +566,7 @@ export default function RequestDetail() {
           <>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-slate-400 font-mono">{request.request_code}</p>
+                <p className="text-xs text-slate-500 font-mono">{request.request_code}</p>
                 <h1 className="text-xl font-bold text-slate-900 mt-1">
                   {request.requester_name} — {request.request_type_name}
                 </h1>
@@ -589,23 +590,23 @@ export default function RequestDetail() {
 
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <dt className="text-slate-400">Đơn vị</dt>
+                <dt className="text-slate-500">Đơn vị</dt>
                 <dd className="text-slate-800">{request.department_name}</dd>
               </div>
               <div>
-                <dt className="text-slate-400">Email</dt>
+                <dt className="text-slate-500">Email</dt>
                 <dd className="text-slate-800">{request.requester_email}</dd>
               </div>
               <div>
-                <dt className="text-slate-400">Thời gian gửi</dt>
+                <dt className="text-slate-500">Thời gian gửi</dt>
                 <dd className="text-slate-800">{new Date(request.created_at).toLocaleString('vi-VN')}</dd>
               </div>
               <div>
-                <dt className="text-slate-400">Nguồn email</dt>
+                <dt className="text-slate-500">Nguồn email</dt>
                 <dd className="text-slate-800">{request.email_source}</dd>
               </div>
               <div>
-                <dt className="text-slate-400">Mức độ ưu tiên</dt>
+                <dt className="text-slate-500">Mức độ ưu tiên</dt>
                 <dd>
                   <select
                     value={request.priority}
@@ -623,7 +624,7 @@ export default function RequestDetail() {
               </div>
               {request.duplicate_of_code && (
                 <div className="col-span-2">
-                  <dt className="text-slate-400">Cảnh báo trùng lặp</dt>
+                  <dt className="text-slate-500">Cảnh báo trùng lặp</dt>
                   <dd className="text-amber-700">
                     <FontAwesomeIcon icon={faTriangleExclamation} /> Có thể trùng với{' '}
                     <a
@@ -638,7 +639,7 @@ export default function RequestDetail() {
               )}
               {request.assignee_name && (
                 <div className="col-span-2">
-                  <dt className="text-slate-400 flex items-center justify-between">
+                  <dt className="text-slate-500 flex items-center justify-between">
                     <span>Người xử lý</span>
                     {!showReassignForm && stepIndex !== 0 && stepIndex !== -1 && (
                       <button
@@ -661,8 +662,8 @@ export default function RequestDetail() {
                 </div>
               )}
               <div className="col-span-2">
-                <dt className="text-slate-400">Xác nhận từ người gửi</dt>
-                <dd className={request.requester_confirmed_at ? 'text-emerald-700' : 'text-slate-400'}>
+                <dt className="text-slate-500">Xác nhận từ người gửi</dt>
+                <dd className={request.requester_confirmed_at ? 'text-emerald-700' : 'text-slate-500'}>
                   {request.requester_confirmed_at ? (
                     <>
                       <FontAwesomeIcon icon={faCircleCheck} className="mr-1" />
@@ -681,7 +682,7 @@ export default function RequestDetail() {
               </div>
               {request.reject_count > 0 && (
                 <div className="col-span-2">
-                  <dt className="text-slate-400">Số lần bị từ chối</dt>
+                  <dt className="text-slate-500">Số lần bị từ chối</dt>
                   <dd className={request.escalated_at ? 'text-red-600 font-semibold' : 'text-orange-600'}>
                     {request.reject_count} lần
                     {request.escalated_at && (
@@ -696,7 +697,7 @@ export default function RequestDetail() {
             </dl>
 
             <div className="mt-4">
-              <dt className="text-slate-400 text-sm flex items-center justify-between">
+              <dt className="text-slate-500 text-sm flex items-center justify-between">
                 <span>Mô tả</span>
                 <button
                   onClick={handleCreateFaq}
@@ -723,7 +724,7 @@ export default function RequestDetail() {
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{request.ai_alternative_suggestion}</p>
                   </>
                 )}
-                <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
                   {request.ai_resolved === 1 && (
                     <>
                       <FontAwesomeIcon icon={faCircleCheck} /> Người gửi báo đã khắc phục được
@@ -751,7 +752,7 @@ export default function RequestDetail() {
 
         {request.attachments?.length > 0 && (
           <div className="mt-4">
-            <dt className="text-slate-400 text-sm mb-2">Ảnh đính kèm ({request.attachments.length})</dt>
+            <dt className="text-slate-500 text-sm mb-2">Ảnh đính kèm ({request.attachments.length})</dt>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {request.attachments.map((a) => (
                 <a
@@ -780,7 +781,7 @@ export default function RequestDetail() {
       {stepIndex === 0 && (
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
           <h2 className="font-semibold text-slate-900 mb-1">Bước tiếp theo: Phân công xử lý</h2>
-          <p className="text-xs text-slate-400 mb-4">
+          <p className="text-xs text-slate-500 mb-4">
             Chọn người phụ trách để bắt đầu xử lý — hệ thống tự chuyển sang &quot;Đang xử lý&quot; và gửi 1 email duy nhất.
           </p>
           {assignFormBlock}
@@ -791,7 +792,7 @@ export default function RequestDetail() {
       {stepIndex === 1 && (
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5 space-y-3">
           <h2 className="font-semibold text-slate-900">Bước tiếp theo: Cập nhật tiến độ</h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Đánh dấu đã xử lý khi có giải pháp — email chờ xác nhận sẽ được gửi cho người yêu cầu. Hoặc chỉ lưu ghi chú tiến độ nếu chưa xong.
           </p>
           <textarea
@@ -834,7 +835,7 @@ export default function RequestDetail() {
             <FontAwesomeIcon icon={faHourglassHalf} className="text-amber-500" />
             Đang chờ người gửi xác nhận
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Hệ thống sẽ tự nhắc nhở và tự đóng nếu người gửi không phản hồi trong thời hạn. Chỉ dùng &quot;Xác nhận thay&quot; khi
             người gửi vắng mặt hoặc không thể tự thao tác — cần ghi rõ lý do.
           </p>
@@ -874,7 +875,7 @@ export default function RequestDetail() {
             <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-500" />
             Yêu cầu đã hoàn thành
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             {request.csat_rating
               ? 'Người gửi đã đánh giá trải nghiệm hỗ trợ — xem điểm ở mục "Xác nhận từ người gửi" phía trên.'
               : 'Người gửi chưa gửi đánh giá trải nghiệm hỗ trợ (không bắt buộc).'}
@@ -896,7 +897,7 @@ export default function RequestDetail() {
             onSubmit={handleUpdate}
             className="mt-3 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 space-y-3"
           >
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Dùng khi cần bỏ qua quy trình chuẩn — vd. từ chối yêu cầu, ép chuyển trạng thái, mở lại thủ công.
             </p>
             <div className="flex gap-2">
@@ -944,11 +945,11 @@ export default function RequestDetail() {
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         <h2 className="font-semibold text-slate-900 mb-3">Lịch sử trạng thái</h2>
-        <p className="text-xs text-slate-400 mb-3">Hiển thị cho người gửi xem tại trang tra cứu.</p>
+        <p className="text-xs text-slate-500 mb-3">Hiển thị cho người gửi xem tại trang tra cứu.</p>
         <ul className="space-y-2">
           {request.history.map((h) => (
             <li key={h.id} className="text-sm flex items-start gap-3">
-              <span className="text-slate-400 w-40 shrink-0">
+              <span className="text-slate-500 w-40 shrink-0">
                 {new Date(h.changed_at).toLocaleString('vi-VN')}
               </span>
               <span>
@@ -961,21 +962,21 @@ export default function RequestDetail() {
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 mb-5">
         <h2 className="font-semibold text-slate-900 mb-3">Lịch sử thao tác</h2>
-        <p className="text-xs text-slate-400 mb-3">Nhật ký nội bộ (audit log) — ai thao tác gì, khi nào. Chỉ admin xem được.</p>
+        <p className="text-xs text-slate-500 mb-3">Nhật ký nội bộ (audit log) — ai thao tác gì, khi nào. Chỉ admin xem được.</p>
         {(!request.auditLog || request.auditLog.length === 0) ? (
-          <p className="text-sm text-slate-400">Chưa có thao tác nào được ghi nhận.</p>
+          <p className="text-sm text-slate-500">Chưa có thao tác nào được ghi nhận.</p>
         ) : (
           <ul className="space-y-2">
             {request.auditLog.map((a) => (
               <li key={a.id} className="text-sm flex items-start gap-3">
-                <span className="text-slate-400 w-40 shrink-0">
+                <span className="text-slate-500 w-40 shrink-0">
                   {new Date(a.created_at).toLocaleString('vi-VN')}
                 </span>
                 <span className="text-slate-700">
                   <span className="font-medium">{a.actor_name || a.actor_username || 'Hệ thống'}</span>
                   {' — '}
                   {AUDIT_ACTION_LABEL[a.action] || a.action}
-                  {a.field_name && <span className="text-slate-400"> ({a.field_name})</span>}
+                  {a.field_name && <span className="text-slate-500"> ({a.field_name})</span>}
                   {(a.old_value || a.new_value) && (
                     <span className="text-slate-500">
                       {': '}
@@ -992,12 +993,12 @@ export default function RequestDetail() {
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6">
         <h2 className="font-semibold text-slate-900 mb-3">Nhật ký email</h2>
         {request.emailLog.length === 0 ? (
-          <p className="text-sm text-slate-400">Chưa có email nào được gửi.</p>
+          <p className="text-sm text-slate-500">Chưa có email nào được gửi.</p>
         ) : (
           <ul className="space-y-2">
             {request.emailLog.map((e) => (
               <li key={e.id} className="text-sm flex items-start gap-3">
-                <span className="text-slate-400 w-40 shrink-0">
+                <span className="text-slate-500 w-40 shrink-0">
                   {new Date(e.created_at).toLocaleString('vi-VN')}
                 </span>
                 <span className="text-slate-700">

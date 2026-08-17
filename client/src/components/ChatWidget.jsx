@@ -129,7 +129,7 @@ export default function ChatWidget({ requestCode, onClose }) {
             </div>
             <p className="text-sm font-semibold text-slate-800 dark:text-paper truncate">Trợ lý AI hỗ trợ kỹ thuật</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:text-ash dark:hover:text-paper shrink-0 px-1" title="Đóng">
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:text-ash dark:hover:text-paper shrink-0 px-1" title="Đóng" aria-label="Đóng trợ lý AI">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
@@ -150,7 +150,7 @@ export default function ChatWidget({ requestCode, onClose }) {
           ))}
           {(phase === 'loading' || phase === 'working' || chatBusy) && (
             <div className="flex justify-start">
-              <div className="bg-slate-100 text-slate-400 rounded-2xl px-3 py-2 text-sm dark:bg-ink-3 dark:text-ash">Đang soạn phản hồi...</div>
+              <div className="bg-slate-100 text-slate-500 rounded-2xl px-3 py-2 text-sm dark:bg-ink-3 dark:text-ash">Đang soạn phản hồi...</div>
             </div>
           )}
           <div ref={bottomRef} />
@@ -182,7 +182,7 @@ export default function ChatWidget({ requestCode, onClose }) {
                 key={star}
                 onClick={() => handleRate(star)}
                 disabled={busy}
-                className="text-2xl leading-none px-0.5 text-amber-400 dark:text-volt hover:scale-110 transition disabled:opacity-60"
+                className="text-2xl leading-none px-0.5 text-amber-400 hover:scale-110 transition disabled:opacity-60"
                 title={`${star} sao`}
               >
                 <FontAwesomeIcon icon={faStar} />

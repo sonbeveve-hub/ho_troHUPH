@@ -4,7 +4,7 @@ const BRAND = '#1B7A4D';
 
 export default function TimeSeries({ data, theme }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-400 dark:text-ash py-8 text-center">Chưa có dữ liệu.</p>;
+    return <p className="text-sm text-slate-500 dark:text-ash py-8 text-center">Chưa có dữ liệu.</p>;
   }
 
   const isDark = theme === 'dark';

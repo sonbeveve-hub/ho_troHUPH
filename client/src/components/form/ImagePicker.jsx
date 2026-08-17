@@ -57,7 +57,7 @@ export default function ImagePicker({ files, onChange }) {
   return (
     <div>
       <label className="block text-sm font-medium text-slate-700 dark:text-paper/90 mb-1">
-        Ảnh đính kèm <span className="text-slate-400 dark:text-ash font-normal">(không bắt buộc, tối đa 20MB)</span>
+        Ảnh đính kèm <span className="text-slate-500 dark:text-ash font-normal">(không bắt buộc, tối đa 20MB)</span>
       </label>
 
       {previews.length > 0 && (

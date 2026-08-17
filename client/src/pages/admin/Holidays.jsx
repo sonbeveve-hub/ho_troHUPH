@@ -89,7 +89,7 @@ export default function Holidays() {
           <div key={item.id} className="px-4 py-3 flex items-center justify-between gap-3">
             <div>
               <span className="text-slate-800">{item.name}</span>
-              <span className="ml-2 text-xs text-slate-400">
+              <span className="ml-2 text-xs text-slate-500">
                 {item.date} {item.recurring ? '(hàng năm)' : ''}
               </span>
             </div>
@@ -98,7 +98,7 @@ export default function Holidays() {
             </button>
           </div>
         ))}
-        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-400">Chưa có ngày nghỉ nào.</p>}
+        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-500">Chưa có ngày nghỉ nào.</p>}
       </div>
 
       {showImport && (

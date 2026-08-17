@@ -153,10 +153,10 @@ export default function AdminUsers() {
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className={item.status === 'active' ? 'text-slate-800' : 'text-slate-400 line-through'}>
+                  <p className={item.status === 'active' ? 'text-slate-800' : 'text-slate-500 line-through'}>
                     {item.full_name || item.username}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     {item.email || item.username} · {ROLE_LABEL[item.role] || item.role}
                     {item.last_login_at && ` · Đăng nhập gần nhất: ${new Date(item.last_login_at).toLocaleString('vi-VN')}`}
                   </p>
@@ -173,7 +173,7 @@ export default function AdminUsers() {
             )}
           </div>
         ))}
-        {items.length === 0 && <p className="px-5 py-8 text-sm text-slate-400">Chưa có tài khoản nào.</p>}
+        {items.length === 0 && <p className="px-5 py-8 text-sm text-slate-500">Chưa có tài khoản nào.</p>}
       </div>
     </div>
   );

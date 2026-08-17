@@ -49,7 +49,7 @@ export default function StaffEmailField({ name, value, onChange }) {
         <p className="mt-1 text-xs text-slate-500 dark:text-ash">
           Tự động điền theo hồ sơ "{match?.name}"
           {match?.department_name ? ` — ${match.department_name}` : ''}.{' '}
-          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-volt underline">
+          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-paper underline">
             Không phải bạn? Nhập thủ công
           </button>
         </p>
@@ -85,7 +85,7 @@ export default function StaffEmailField({ name, value, onChange }) {
         </select>
         <p className="mt-1 text-xs text-slate-500 dark:text-ash">
           Không thấy tên bạn?{' '}
-          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-volt underline">
+          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-paper underline">
             Nhập email thủ công
           </button>
         </p>
@@ -108,7 +108,7 @@ export default function StaffEmailField({ name, value, onChange }) {
         }}
         className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:placeholder:text-ash dark:focus:ring-volt"
       />
-      {loading && <p className="mt-1 text-xs text-slate-400 dark:text-ash">Đang tìm kiếm...</p>}
+      {loading && <p className="mt-1 text-xs text-slate-500 dark:text-ash">Đang tìm kiếm...</p>}
       {showValidation && <p className="mt-1 text-xs text-red-500 dark:text-red-400">Email không đúng định dạng.</p>}
       {mode === 'idle' && name.trim().length >= 2 && !loading && matches.length === 0 && (
         <p className="mt-1 text-xs text-slate-500 dark:text-ash">

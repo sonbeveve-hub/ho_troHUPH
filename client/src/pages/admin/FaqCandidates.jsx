@@ -87,7 +87,7 @@ export default function FaqCandidates() {
             key={item.id}
             className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5"
           >
-            <p className="text-xs text-slate-400 mb-2">
+            <p className="text-xs text-slate-500 mb-2">
               Từ {item.request_ids.length} yêu cầu tương tự — mã ID: {item.request_ids.join(', ')}
             </p>
             {editingId === item.id ? (
@@ -155,7 +155,7 @@ export default function FaqCandidates() {
           </div>
         ))}
         {items.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-8">Chưa có đề xuất nào đang chờ duyệt.</p>
+          <p className="text-sm text-slate-500 text-center py-8">Chưa có đề xuất nào đang chờ duyệt.</p>
         )}
       </div>
     </div>

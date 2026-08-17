@@ -186,7 +186,7 @@ export default function Staff() {
         placeholder="Tìm theo tên..."
         className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm mb-4"
       />
-      <p className="text-xs text-slate-400 mb-2">{result.total} nhân sự</p>
+      <p className="text-xs text-slate-500 mb-2">{result.total} nhân sự</p>
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((s) => (
@@ -243,7 +243,7 @@ export default function Staff() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-slate-800">{s.name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {s.email || 'chưa có email'} {s.phone ? `· ${s.phone}` : ''} ·{' '}
                       {s.department_name || 'chưa rõ đơn vị'}
                     </p>
@@ -354,7 +354,7 @@ export default function Staff() {
             )}
           </div>
         ))}
-        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-400">Chưa có nhân sự nào.</p>}
+        {items.length === 0 && <p className="px-4 py-6 text-sm text-slate-500">Chưa có nhân sự nào.</p>}
       </div>
 
       {totalPages > 1 && (

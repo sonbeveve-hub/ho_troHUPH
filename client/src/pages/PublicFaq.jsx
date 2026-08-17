@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faCircleQuestion, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../api/client.js';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import PublicLogo from '../components/PublicLogo.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import PublicNav from '../components/PublicNav.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import { ChatBubbleIllustration, ShieldCheckIllustration, LaptopIllustration } from '../components/illustrations.jsx';
 
@@ -37,12 +39,13 @@ export default function PublicFaq() {
     <div className="min-h-screen px-4 pb-16 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
-      <div className="relative z-10 max-w-2xl mx-auto pt-12 sm:pt-16">
+      <PublicNav />
+      <div className="relative z-10 max-w-2xl mx-auto pt-4 sm:pt-8">
         <div className="mb-6 text-center">
           <div className="mb-5">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent dark:bg-none dark:text-paper">
             Câu hỏi thường gặp
           </h1>
           <p className="mt-3 text-slate-600 dark:text-ash">
@@ -80,12 +83,28 @@ export default function PublicFaq() {
           </div>
         )}
 
+        {!items && !error && (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="animate-pulse bg-white/80 dark:bg-ink-2/80 rounded-2xl border border-white/60 dark:border-white/10 p-4 h-16" />
+            ))}
+          </div>
+        )}
+
         {items && items.length === 0 && (
-          <p className="text-center text-slate-400 dark:text-ash text-sm">Chưa có câu hỏi thường gặp nào.</p>
+          <EmptyState
+            icon={faCircleQuestion}
+            title="Chưa có câu hỏi thường gặp nào"
+            description="Cơ sở tri thức sẽ được cập nhật dần từ các yêu cầu đã xử lý."
+          />
         )}
 
         {items && items.length > 0 && filtered.length === 0 && (
-          <p className="text-center text-slate-400 dark:text-ash text-sm">Không tìm thấy câu hỏi phù hợp.</p>
+          <EmptyState
+            icon={faMagnifyingGlass}
+            title="Không tìm thấy câu hỏi phù hợp"
+            description="Thử một từ khoá khác, hoặc gửi yêu cầu để được hỗ trợ trực tiếp."
+          />
         )}
 
         <div className="space-y-3">
@@ -96,12 +115,12 @@ export default function PublicFaq() {
                   <span>{item.question}</span>
                   <FontAwesomeIcon
                     icon={faChevronDown}
-                    className="text-slate-400 dark:text-ash group-open:rotate-180 transition shrink-0 mt-1"
+                    className="text-slate-500 dark:text-ash group-open:rotate-180 transition shrink-0 mt-1"
                   />
                 </summary>
                 <p className="mt-3 text-sm text-slate-600 dark:text-ash whitespace-pre-wrap">{item.answer}</p>
                 {item.request_type_name && (
-                  <p className="mt-2 text-xs text-slate-400 dark:text-ash/70">{item.request_type_name}</p>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-ash/70">{item.request_type_name}</p>
                 )}
               </details>
             </ScrollReveal>
@@ -110,7 +129,7 @@ export default function PublicFaq() {
 
         <p className="mt-6 text-center text-sm text-slate-700 dark:text-paper font-medium">
           Chưa tìm thấy câu trả lời?{' '}
-          <Link to="/" className="text-brand-700 dark:text-volt font-semibold hover:underline">
+          <Link to="/" className="text-brand-700 dark:text-paper font-semibold hover:underline">
             Gửi yêu cầu hỗ trợ
           </Link>
         </p>

@@ -145,7 +145,7 @@ export default function Assignees() {
       </form>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-      {items.length > 0 && <p className="text-xs text-slate-400 mb-2">{items.length} người</p>}
+      {items.length > 0 && <p className="text-xs text-slate-500 mb-2">{items.length} người</p>}
 
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 divide-y divide-slate-100">
         {items.map((item) => (
@@ -188,8 +188,8 @@ export default function Assignees() {
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className={item.active ? 'text-slate-800' : 'text-slate-400 line-through'}>{item.name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className={item.active ? 'text-slate-800' : 'text-slate-500 line-through'}>{item.name}</p>
+                    <p className="text-xs text-slate-500">
                       {item.email}
                       {item.phone ? ` — ${item.phone}` : ''}
                     </p>
@@ -306,7 +306,7 @@ export default function Assignees() {
           </div>
         ))}
         {items.length === 0 && (
-          <p className="px-4 py-6 text-sm text-slate-400">Chưa có người phụ trách nào.</p>
+          <p className="px-4 py-6 text-sm text-slate-500">Chưa có người phụ trách nào.</p>
         )}
       </div>
     </div>
