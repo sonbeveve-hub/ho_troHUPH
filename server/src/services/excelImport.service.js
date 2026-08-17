@@ -44,16 +44,17 @@ export function importStaffFromExcel(buffer) {
     'SELECT id FROM staff WHERE normalized_name = ? AND department_id IS ?'
   );
   const insertStaff = db.prepare(
-    `INSERT INTO staff (name, normalized_name, email, department_id) VALUES (?, ?, ?, ?)`
+    `INSERT INTO staff (name, normalized_name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)`
   );
   const updateStaff = db.prepare(
-    `UPDATE staff SET name = ?, normalized_name = ?, email = ?, department_id = ?, updated_at = datetime('now') WHERE id = ?`
+    `UPDATE staff SET name = ?, normalized_name = ?, email = ?, phone = ?, department_id = ?, updated_at = datetime('now') WHERE id = ?`
   );
 
   const run = db.transaction(() => {
     rows.forEach((row, index) => {
       const name = pickColumn(row, ['Họ tên', 'Ho ten', 'Tên', 'Ten', 'Name', 'Họ và tên']);
       const email = pickColumn(row, ['Email', 'Mail', 'Địa chỉ email']);
+      const phone = pickColumn(row, ['Số điện thoại', 'So dien thoai', 'SĐT', 'SDT', 'Phone', 'Điện thoại']);
       const departmentName = pickColumn(row, [
         'Khoa/phòng/đơn vị',
         'Khoa phong don vi',
@@ -75,10 +76,10 @@ export function importStaffFromExcel(buffer) {
       if (!existing) existing = findByNameDept.get(normalizedName, departmentId);
 
       if (existing) {
-        updateStaff.run(name, normalizedName, email || null, departmentId, existing.id);
+        updateStaff.run(name, normalizedName, email || null, phone || null, departmentId, existing.id);
         result.updated += 1;
       } else {
-        insertStaff.run(name, normalizedName, email || null, departmentId);
+        insertStaff.run(name, normalizedName, email || null, phone || null, departmentId);
         result.inserted += 1;
       }
     });

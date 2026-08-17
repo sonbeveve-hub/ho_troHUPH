@@ -19,6 +19,7 @@ import AdminUsers from './pages/admin/AdminUsers.jsx';
 import SlaRules from './pages/admin/SlaRules.jsx';
 import Holidays from './pages/admin/Holidays.jsx';
 import FaqCandidates from './pages/admin/FaqCandidates.jsx';
+import Changelog from './pages/admin/Changelog.jsx';
 
 export default function App() {
   const [admin, setAdmin] = useState(undefined); // undefined = đang kiểm tra, null = chưa đăng nhập
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="users" element={<AdminUsers />} />
         <Route path="sla-rules" element={<SlaRules />} />
         <Route path="holidays" element={<Holidays />} />
+        <Route path="changelog" element={<Changelog />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

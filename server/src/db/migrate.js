@@ -269,6 +269,14 @@ function migrateAdminUserRoles() {
   }
 }
 
+// Thêm số điện thoại cho nhân sự — không nằm trong CHECK constraint nào nên chỉ cần ADD
+// COLUMN đơn giản.
+function migrateAddStaffPhone() {
+  const columns = db.prepare('PRAGMA table_info(staff)').all();
+  if (columns.some((c) => c.name === 'phone')) return;
+  db.exec('ALTER TABLE staff ADD COLUMN phone TEXT;');
+}
+
 // Thêm mức vai trò thứ 3 "handler" (người phụ trách) — chỉ xử lý yêu cầu được phân công,
 // không cấu hình danh mục/SLA/ngày nghỉ/nhân sự/FAQ. SQLite không ALTER được CHECK constraint
 // trực tiếp nên phải dựng lại bảng như các lần đổi CHECK trước — khác với các lần trước, có
@@ -331,6 +339,7 @@ export function migrate() {
   migratePriorityEnum();
   migrateAdminUserRoles();
   migrateHandlerRole();
+  migrateAddStaffPhone();
   // Idempotent — bảo đảm các index này luôn tồn tại dù đi qua nhánh nào ở trên (cột có thể
   // vừa được ALTER TABLE thêm vào nên không đặt index này trong schema.sql).
   db.exec('CREATE INDEX IF NOT EXISTS idx_requests_processing_time ON requests(processing_time_id);');

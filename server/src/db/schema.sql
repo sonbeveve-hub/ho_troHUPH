@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS staff (
   name TEXT NOT NULL,
   normalized_name TEXT NOT NULL,
   email TEXT,
+  phone TEXT,
   department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

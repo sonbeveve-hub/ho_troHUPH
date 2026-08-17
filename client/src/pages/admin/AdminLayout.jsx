@@ -14,6 +14,7 @@ import {
   faLightbulb,
   faUserShield,
   faRightFromBracket,
+  faClockRotateLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import { api } from '../../api/client.js';
 import OrganicBackdrop from '../../components/OrganicBackdrop.jsx';
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { to: '/admin/assignees', label: 'Người phụ trách', icon: faUserGear, fullAdminOnly: true },
   { to: '/admin/faq', label: 'Cơ sở tri thức', icon: faCircleQuestion, fullAdminOnly: true },
   { to: '/admin/faq-candidates', label: 'Đề xuất FAQ', icon: faLightbulb, fullAdminOnly: true },
+  { to: '/admin/changelog', label: 'Thông tin cập nhật', icon: faClockRotateLeft },
 ];
 
 const SUPER_ADMIN_NAV_ITEMS = [
