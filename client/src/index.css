@@ -13,6 +13,11 @@ html {
 body {
   background-color: #FAFAF9;
 }
+/* Đồng bộ với useTheme.js — nền body cũng cần đổi theo, không chỉ khối nội dung bên trong,
+   để không lộ dải màu sáng ở mép trên/dưới khi trình duyệt "nảy" lúc cuộn quá đầu/cuối trang. */
+body.dark {
+  background-color: #0F1012;
+}
 
 /* Chuyển động nhẹ liên tục cho các icon minh hoạ trang trí — chạy ngay khi tải trang, không
    phụ thuộc cuộn/tương tác, để trang có sức sống ngay từ đầu thay vì chỉ động khi cuộn tới. */
