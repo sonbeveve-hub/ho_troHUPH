@@ -5,7 +5,6 @@ import { faChevronDown, faCircleQuestion, faMagnifyingGlass } from '@fortawesome
 import { api } from '../api/client.js';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
 import PublicLogo from '../components/PublicLogo.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import PublicNav from '../components/PublicNav.jsx';
@@ -38,8 +37,7 @@ export default function PublicFaq() {
     <div className={theme === 'dark' ? 'dark' : ''}>
     <div className="min-h-screen px-4 pb-16 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
-      <ThemeToggle theme={theme} onToggle={toggleTheme} />
-      <PublicNav />
+      <PublicNav theme={theme} onToggleTheme={toggleTheme} />
       <div className="relative z-10 max-w-2xl mx-auto pt-4 sm:pt-8">
         <div className="mb-6 text-center">
           <div className="mb-5">

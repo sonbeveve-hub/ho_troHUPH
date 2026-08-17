@@ -175,8 +175,7 @@ export default function PublicRequestForm() {
     <div className={theme === 'dark' ? 'dark' : ''}>
     <div className="min-h-screen px-4 pb-16 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
-      <ThemeToggle theme={theme} onToggle={toggleTheme} />
-      <PublicNav />
+      <PublicNav theme={theme} onToggleTheme={toggleTheme} />
 
       {/* ===== Hero ===== */}
       <div className="relative z-10 max-w-5xl mx-auto pt-4 sm:pt-8">

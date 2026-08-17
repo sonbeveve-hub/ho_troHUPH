@@ -12,6 +12,10 @@ html {
 
 body {
   background-color: #FAFAF9;
+  /* Căn đều (justify) làm mặc định cho mọi văn bản — kế thừa xuống toàn bộ trang. Phần tử nào
+     đã có class căn lề riêng (text-center/text-left/text-right của Tailwind) vẫn giữ nguyên vì
+     class trên chính phần tử đó có độ ưu tiên cao hơn selector "body", không bị ghi đè. */
+  text-align: justify;
 }
 /* Đồng bộ với useTheme.js — nền body cũng cần đổi theo, không chỉ khối nội dung bên trong,
    để không lộ dải màu sáng ở mép trên/dưới khi trình duyệt "nảy" lúc cuộn quá đầu/cuối trang. */

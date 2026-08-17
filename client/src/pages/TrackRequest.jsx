@@ -6,7 +6,6 @@ import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge, STATUS_META } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
 import PublicLogo from '../components/PublicLogo.jsx';
 import PublicNav from '../components/PublicNav.jsx';
 import EmptyState from '../components/EmptyState.jsx';
@@ -115,8 +114,7 @@ export default function TrackRequest() {
     <div className={theme === 'dark' ? 'dark' : ''}>
     <div className="min-h-screen px-4 py-10 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
-      <ThemeToggle theme={theme} onToggle={toggleTheme} />
-      <PublicNav />
+      <PublicNav theme={theme} onToggleTheme={toggleTheme} />
       <div className="relative z-10 max-w-xl mx-auto">
         <div className="mb-2 text-center">
           <div className="mb-4">
