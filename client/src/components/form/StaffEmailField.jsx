@@ -39,17 +39,17 @@ export default function StaffEmailField({ name, value, onChange }) {
     const match = matches[0];
     return (
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-paper/90 mb-1">Email</label>
         <input
           type="email"
           readOnly
           value={value}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-slate-700"
+          className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-slate-700 dark:border-white/10 dark:bg-ink-3/50 dark:text-paper"
         />
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-ash">
           Tự động điền theo hồ sơ "{match?.name}"
           {match?.department_name ? ` — ${match.department_name}` : ''}.{' '}
-          <button type="button" onClick={switchToManual} className="text-brand-600 underline">
+          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-volt underline">
             Không phải bạn? Nhập thủ công
           </button>
         </p>
@@ -60,7 +60,7 @@ export default function StaffEmailField({ name, value, onChange }) {
   if (mode === 'picked') {
     return (
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 dark:text-paper/90 mb-1">
           Chọn đúng email của bạn
         </label>
         <select
@@ -74,7 +74,7 @@ export default function StaffEmailField({ name, value, onChange }) {
               name: picked?.name || null,
             });
           }}
-          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:focus:ring-volt"
         >
           <option value="">-- Có {matches.length} người trùng tên, vui lòng chọn --</option>
           {matches.map((m) => (
@@ -83,9 +83,9 @@ export default function StaffEmailField({ name, value, onChange }) {
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-ash">
           Không thấy tên bạn?{' '}
-          <button type="button" onClick={switchToManual} className="text-brand-600 underline">
+          <button type="button" onClick={switchToManual} className="text-brand-600 dark:text-volt underline">
             Nhập email thủ công
           </button>
         </p>
@@ -97,7 +97,7 @@ export default function StaffEmailField({ name, value, onChange }) {
   const showValidation = manualEmail.length > 0 && !EMAIL_RE.test(manualEmail);
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+      <label className="block text-sm font-medium text-slate-700 dark:text-paper/90 mb-1">Email</label>
       <input
         type="email"
         placeholder="mail@huph.edu.vn"
@@ -106,12 +106,12 @@ export default function StaffEmailField({ name, value, onChange }) {
           setManualEmail(e.target.value);
           onChange({ email: e.target.value, source: 'manual' });
         }}
-        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:placeholder:text-ash dark:focus:ring-volt"
       />
-      {loading && <p className="mt-1 text-xs text-slate-400">Đang tìm kiếm...</p>}
-      {showValidation && <p className="mt-1 text-xs text-red-500">Email không đúng định dạng.</p>}
+      {loading && <p className="mt-1 text-xs text-slate-400 dark:text-ash">Đang tìm kiếm...</p>}
+      {showValidation && <p className="mt-1 text-xs text-red-500 dark:text-red-400">Email không đúng định dạng.</p>}
       {mode === 'idle' && name.trim().length >= 2 && !loading && matches.length === 0 && (
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-ash">
           Không tìm thấy hồ sơ trùng tên, vui lòng nhập email của bạn.
         </p>
       )}

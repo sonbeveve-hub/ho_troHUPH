@@ -56,15 +56,15 @@ export default function ImagePicker({ files, onChange }) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1">
-        Ảnh đính kèm <span className="text-slate-400 font-normal">(không bắt buộc, tối đa 20MB)</span>
+      <label className="block text-sm font-medium text-slate-700 dark:text-paper/90 mb-1">
+        Ảnh đính kèm <span className="text-slate-400 dark:text-ash font-normal">(không bắt buộc, tối đa 20MB)</span>
       </label>
 
       {previews.length > 0 && (
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-2">
           {previews.map((src, i) => (
             <div key={i} className="relative group aspect-square">
-              <img src={src} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200" />
+              <img src={src} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-white/10" />
               <button
                 type="button"
                 onClick={() => removeAt(i)}
@@ -82,7 +82,7 @@ export default function ImagePicker({ files, onChange }) {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
+          className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80 dark:border-white/20 dark:bg-ink-3/50 dark:text-ash dark:hover:bg-ink-3"
         >
           <FontAwesomeIcon icon={faPlus} className="mr-1" />
           Thêm ảnh ({files.length}/{MAX_COUNT} · {formatMB(totalBytes)}MB/20MB)
@@ -91,7 +91,7 @@ export default function ImagePicker({ files, onChange }) {
           type="button"
           onClick={() => cameraInputRef.current?.click()}
           title="Chụp ảnh bằng camera"
-          className="shrink-0 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80"
+          className="shrink-0 rounded-xl border border-dashed border-slate-300 bg-white/50 px-3 py-2 text-sm text-slate-600 hover:bg-white/80 dark:border-white/20 dark:bg-ink-3/50 dark:text-ash dark:hover:bg-ink-3"
         >
           <FontAwesomeIcon icon={faCamera} className="mr-1" />
           Chụp ảnh
@@ -114,7 +114,7 @@ export default function ImagePicker({ files, onChange }) {
         className="hidden"
       />
 
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   );
 }

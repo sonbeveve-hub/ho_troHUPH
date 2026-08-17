@@ -121,15 +121,15 @@ export default function ChatWidget({ requestCode, onClose }) {
 
   return (
     <div className="w-full">
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/10 border border-white/60 flex flex-col max-h-[70vh]">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/10 border border-white/60 flex flex-col max-h-[70vh] dark:bg-ink-2/95 dark:border-white/10 dark:shadow-black/40">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 dark:border-white/10">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm dark:from-volt dark:to-mint dark:text-ink">
               <FontAwesomeIcon icon={faRobot} />
             </div>
-            <p className="text-sm font-semibold text-slate-800 truncate">Trợ lý AI hỗ trợ kỹ thuật</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-paper truncate">Trợ lý AI hỗ trợ kỹ thuật</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0 px-1" title="Đóng">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:text-ash dark:hover:text-paper shrink-0 px-1" title="Đóng">
             <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
@@ -140,8 +140,8 @@ export default function ChatWidget({ requestCode, onClose }) {
               <div
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
                   m.from === 'user'
-                    ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white'
-                    : 'bg-slate-100 text-slate-700'
+                    ? 'bg-gradient-to-r from-brand-400 to-brand-600 text-white dark:from-volt dark:to-mint dark:text-ink'
+                    : 'bg-slate-100 text-slate-700 dark:bg-ink-3 dark:text-paper'
                 }`}
               >
                 {m.text}
@@ -150,25 +150,25 @@ export default function ChatWidget({ requestCode, onClose }) {
           ))}
           {(phase === 'loading' || phase === 'working' || chatBusy) && (
             <div className="flex justify-start">
-              <div className="bg-slate-100 text-slate-400 rounded-2xl px-3 py-2 text-sm">Đang soạn phản hồi...</div>
+              <div className="bg-slate-100 text-slate-400 rounded-2xl px-3 py-2 text-sm dark:bg-ink-3 dark:text-ash">Đang soạn phản hồi...</div>
             </div>
           )}
           <div ref={bottomRef} />
         </div>
 
         {phase === 'ask' && (
-          <div className="flex gap-2 px-4 py-3 border-t border-slate-100">
+          <div className="flex gap-2 px-4 py-3 border-t border-slate-100 dark:border-white/10">
             <button
               onClick={() => handleFeedback(true)}
               disabled={busy}
-              className="flex-1 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:shadow-lg disabled:opacity-60"
+              className="flex-1 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:shadow-lg disabled:opacity-60 dark:from-volt dark:to-mint dark:text-ink dark:shadow-volt/20"
             >
               Đã khắc phục
             </button>
             <button
               onClick={() => handleFeedback(false)}
               disabled={busy}
-              className="flex-1 rounded-full border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              className="flex-1 rounded-full border border-slate-200 bg-white/70 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-ink-3/70 dark:text-ash dark:hover:bg-ink-3"
             >
               Chưa được
             </button>
@@ -176,13 +176,13 @@ export default function ChatWidget({ requestCode, onClose }) {
         )}
 
         {phase === 'rating' && (
-          <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-slate-100">
+          <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-slate-100 dark:border-white/10">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 onClick={() => handleRate(star)}
                 disabled={busy}
-                className="text-2xl leading-none px-0.5 text-amber-400 hover:scale-110 transition disabled:opacity-60"
+                className="text-2xl leading-none px-0.5 text-amber-400 dark:text-volt hover:scale-110 transition disabled:opacity-60"
                 title={`${star} sao`}
               >
                 <FontAwesomeIcon icon={faStar} />
@@ -192,18 +192,18 @@ export default function ChatWidget({ requestCode, onClose }) {
         )}
 
         {phase !== 'loading' && phase !== 'unavailable' && (
-          <form onSubmit={handleSendChat} className="flex gap-2 px-4 py-3 border-t border-slate-100">
+          <form onSubmit={handleSendChat} className="flex gap-2 px-4 py-3 border-t border-slate-100 dark:border-white/10">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Nhập câu hỏi cho Trợ lý AI..."
               disabled={chatBusy}
-              className="flex-1 rounded-full border border-slate-200 bg-white/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-60"
+              className="flex-1 rounded-full border border-slate-200 bg-white/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-60 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:placeholder:text-ash dark:focus:ring-volt"
             />
             <button
               type="submit"
               disabled={chatBusy || !chatInput.trim()}
-              className="shrink-0 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:shadow-lg disabled:opacity-60"
+              className="shrink-0 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:shadow-lg disabled:opacity-60 dark:from-volt dark:to-mint dark:text-ink dark:shadow-volt/20"
             >
               Gửi
             </button>

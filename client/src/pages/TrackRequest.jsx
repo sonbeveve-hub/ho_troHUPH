@@ -6,6 +6,8 @@ import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
+import { useTheme } from '../hooks/useTheme.js';
 import { TicketIllustration, ClockIllustration } from '../components/illustrations.jsx';
 import { FILE_TIME } from '../utils/cacheBust.js';
 
@@ -34,6 +36,7 @@ export default function TrackRequest() {
   const autoRateStars = Number(searchParams.get('rate'));
   const autoRate = Number.isInteger(autoRateStars) && autoRateStars >= 1 && autoRateStars <= 5 ? autoRateStars : null;
   const [q, setQ] = useState(codeParam || '');
+  const [theme, toggleTheme] = useTheme();
   const [results, setResults] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(false);
@@ -98,12 +101,14 @@ export default function TrackRequest() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-10">
+    <div className={theme === 'dark' ? 'dark' : ''}>
+    <div className="min-h-screen px-4 py-10 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
+      <ThemeToggle theme={theme} onToggle={toggleTheme} />
       <div className="relative z-10 max-w-xl mx-auto">
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-slate-500 hover:text-brand-700 transition"
+          className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-slate-500 hover:text-brand-700 dark:text-ash dark:hover:text-volt transition"
         >
           <FontAwesomeIcon icon={faHouse} />
           Về trang chủ
@@ -111,10 +116,10 @@ export default function TrackRequest() {
 
         <div className="mb-2 text-center">
           <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent">
             Tra cứu yêu cầu hỗ trợ
           </h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-slate-600 dark:text-ash">
             Nhập mã yêu cầu, họ tên, email hoặc khoa/phòng/đơn vị để xem tình trạng xử lý.
           </p>
         </div>
@@ -132,38 +137,38 @@ export default function TrackRequest() {
 
         <form
           onSubmit={handleSearch}
-          className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 flex gap-2"
+          className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 flex gap-2 dark:bg-ink-2/80 dark:border-white/10 dark:shadow-black/30"
         >
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Mã yêu cầu / Họ tên / Email / Đơn vị"
-            className="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+            className="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:placeholder:text-ash dark:focus:ring-volt"
           />
           <button
             type="submit"
             disabled={loading}
-            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60"
+            className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 active:scale-95 transition disabled:opacity-60 dark:from-volt dark:to-mint dark:text-ink dark:shadow-volt/20"
           >
             {loading ? 'Đang tìm...' : 'Tra cứu'}
           </button>
         </form>
 
         {error && (
-          <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-300">
             {error}
           </div>
         )}
 
         {sortedResults && sortedResults.length > 1 && (
           <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">{sortedResults.length} kết quả</p>
-            <label className="flex items-center gap-2 text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-ash">{sortedResults.length} kết quả</p>
+            <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-ash">
               Sắp xếp theo
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white/70 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400"
+                className="rounded-xl border border-slate-200 bg-white/70 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:focus:ring-volt"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -186,6 +191,7 @@ export default function TrackRequest() {
           />
         ))}
       </div>
+    </div>
     </div>
   );
 }
@@ -279,11 +285,11 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
   }, [autoRate, request.status, request.csat_rating]);
 
   return (
-    <div className="mt-5 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8">
+    <div className="mt-5 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-6 sm:p-8 dark:bg-ink-2/80 dark:border-white/10 dark:shadow-black/30">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-slate-400 font-mono">{request.request_code}</p>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">{request.request_type_name}</h2>
+          <p className="text-xs text-slate-400 dark:text-ash font-mono">{request.request_code}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-paper mt-1">{request.request_type_name}</h2>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <StatusBadge status={request.status} />
@@ -293,92 +299,94 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
-          <dt className="text-slate-400">Người gửi</dt>
-          <dd className="text-slate-800">{request.requester_name}</dd>
+          <dt className="text-slate-400 dark:text-ash">Người gửi</dt>
+          <dd className="text-slate-800 dark:text-paper">{request.requester_name}</dd>
         </div>
         <div>
-          <dt className="text-slate-400">Đơn vị</dt>
-          <dd className="text-slate-800">{request.department_name}</dd>
+          <dt className="text-slate-400 dark:text-ash">Đơn vị</dt>
+          <dd className="text-slate-800 dark:text-paper">{request.department_name}</dd>
         </div>
         <div>
-          <dt className="text-slate-400">Thời gian gửi</dt>
-          <dd className="text-slate-800">{new Date(request.created_at).toLocaleString('vi-VN')}</dd>
+          <dt className="text-slate-400 dark:text-ash">Thời gian gửi</dt>
+          <dd className="text-slate-800 dark:text-paper">{new Date(request.created_at).toLocaleString('vi-VN')}</dd>
         </div>
         {request.assignee_name && (
           <div>
-            <dt className="text-slate-400">Người phụ trách</dt>
-            <dd className="text-slate-800">{request.assignee_name}</dd>
+            <dt className="text-slate-400 dark:text-ash">Người phụ trách</dt>
+            <dd className="text-slate-800 dark:text-paper">{request.assignee_name}</dd>
           </div>
         )}
       </dl>
 
       <div className="mt-4">
-        <dt className="text-slate-400 text-sm">Mô tả</dt>
-        <dd className="text-slate-800 mt-1 whitespace-pre-wrap">{request.description}</dd>
+        <dt className="text-slate-400 dark:text-ash text-sm">Mô tả</dt>
+        <dd className="text-slate-800 dark:text-paper mt-1 whitespace-pre-wrap">{request.description}</dd>
       </div>
 
       {request.status === 'resolved_pending' && request.admin_notes && (
-        <div className="mt-4 rounded-2xl bg-yellow-50 border border-yellow-200 p-4">
-          <p className="text-xs font-semibold text-yellow-800 mb-1">Giải pháp/ghi chú từ Trung tâm</p>
-          <p className="text-sm text-yellow-900 whitespace-pre-wrap">{request.admin_notes}</p>
+        <div className="mt-4 rounded-2xl bg-yellow-50 border border-yellow-200 p-4 dark:bg-yellow-500/10 dark:border-yellow-500/20">
+          <p className="text-xs font-semibold text-yellow-800 dark:text-yellow-300 mb-1">Giải pháp/ghi chú từ Trung tâm</p>
+          <p className="text-sm text-yellow-900 dark:text-yellow-100/90 whitespace-pre-wrap">{request.admin_notes}</p>
         </div>
       )}
 
       <div className="mt-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-2">Lịch sử xử lý</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-paper mb-2">Lịch sử xử lý</h3>
         <ul className="space-y-2">
           {request.history.map((h, i) => (
             <li key={i} className="text-sm flex items-start gap-3">
-              <span className="text-slate-400 w-36 shrink-0">
+              <span className="text-slate-400 dark:text-ash w-36 shrink-0">
                 {new Date(h.changed_at).toLocaleString('vi-VN')}
               </span>
               <span>
-                <StatusBadge status={h.status} /> {h.note && <span className="text-slate-600 ml-2">{h.note}</span>}
+                <StatusBadge status={h.status} /> {h.note && <span className="text-slate-600 dark:text-ash ml-2">{h.note}</span>}
               </span>
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="mt-6 border-t border-slate-100 pt-5">
-        {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+      <div className="mt-6 border-t border-slate-100 dark:border-white/10 pt-5">
+        {error && <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>}
 
         {request.requester_confirmed_at || request.status === 'done_auto' ? (
           <div
             className={`rounded-xl px-4 py-3 border ${
-              request.requester_confirmed_at ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'
+              request.requester_confirmed_at
+                ? 'bg-emerald-50 border-emerald-200 dark:bg-mint/10 dark:border-mint/20'
+                : 'bg-slate-50 border-slate-200 dark:bg-ink-3/70 dark:border-white/10'
             }`}
           >
             {request.requester_confirmed_at ? (
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-emerald-700 dark:text-mint">
                 <FontAwesomeIcon icon={faCircleCheck} className="mr-1.5" />
                 Đã xác nhận hỗ trợ lúc {new Date(request.requester_confirmed_at).toLocaleString('vi-VN')}.
               </p>
             ) : (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-ash">
                 Yêu cầu đã được hệ thống tự động đóng do không nhận được phản hồi xác nhận trong thời hạn quy định.
               </p>
             )}
 
             {request.csat_rating ? (
-              <p className="mt-1 text-sm text-amber-600 flex items-center gap-1">
+              <p className="mt-1 text-sm text-amber-600 dark:text-volt flex items-center gap-1">
                 <span>Đánh giá của bạn:</span>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <FontAwesomeIcon key={star} icon={star <= request.csat_rating ? faStarSolid : faStarRegular} />
                 ))}
               </p>
             ) : rateSubmitting ? (
-              <p className="mt-2 text-xs text-slate-400">Đang gửi đánh giá...</p>
+              <p className="mt-2 text-xs text-slate-400 dark:text-ash">Đang gửi đánh giá...</p>
             ) : (
               <div className="mt-2">
-                <p className="text-xs text-slate-400 mb-1">Bạn hài lòng với kết quả hỗ trợ này không?</p>
+                <p className="text-xs text-slate-400 dark:text-ash mb-1">Bạn hài lòng với kết quả hỗ trợ này không?</p>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => handleRate(star)}
-                      className="text-2xl leading-none text-slate-200 hover:text-amber-400 transition"
+                      className="text-2xl leading-none text-slate-200 dark:text-white/15 hover:text-amber-400 dark:hover:text-volt transition"
                       title={`Đánh giá ${star} sao`}
                     >
                       <FontAwesomeIcon icon={faStarSolid} />
@@ -389,16 +397,16 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
             )}
           </div>
         ) : request.status === 'reopened' ? (
-          <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 dark:bg-orange-500/10 dark:border-orange-500/20 dark:text-orange-300">
             Yêu cầu đã được mở lại và Trung tâm đang tiếp tục xử lý. Bạn sẽ được thông báo khi có cập nhật mới.
           </p>
         ) : autoConfirmed && confirming ? (
-          <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 dark:bg-ink-3/70 dark:border-white/10 dark:text-ash">
             Đang xác nhận từ liên kết trong email...
           </p>
         ) : request.status === 'resolved_pending' ? (
           <div>
-            <p className="text-sm text-slate-500 mb-3">
+            <p className="text-sm text-slate-500 dark:text-ash mb-3">
               Yêu cầu của bạn đã được hỗ trợ xong? Hãy xác nhận để Trung tâm ghi nhận và đóng yêu
               cầu — sau khi xác nhận, bạn sẽ được mời đánh giá trải nghiệm hỗ trợ.
             </p>
@@ -407,7 +415,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
               <button
                 onClick={handleConfirm}
                 disabled={confirming || rejecting}
-                className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-sm text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60"
+                className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2 text-sm text-white font-semibold shadow-lg shadow-brand-500/30 hover:shadow-brand-500/40 transition disabled:opacity-60 dark:from-volt dark:to-mint dark:text-ink dark:shadow-volt/20"
               >
                 {confirming ? (
                   'Đang xác nhận...'
@@ -421,7 +429,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
               <button
                 onClick={() => setShowRejectForm((v) => !v)}
                 disabled={confirming || rejecting}
-                className="rounded-full border border-red-200 bg-red-50 px-5 py-2 text-sm text-red-700 font-semibold hover:bg-red-100 transition disabled:opacity-60"
+                className="rounded-full border border-red-200 bg-red-50 px-5 py-2 text-sm text-red-700 font-semibold hover:bg-red-100 transition disabled:opacity-60 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
               >
                 <FontAwesomeIcon icon={faCircleXmark} className="mr-1.5" />
                 Chưa hài lòng, yêu cầu xử lý lại
@@ -435,7 +443,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
                   onChange={(e) => setRejectReason(e.target.value)}
                   rows={2}
                   placeholder="Vui lòng cho biết lý do chưa hài lòng..."
-                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm dark:border-white/10 dark:bg-ink-3/70 dark:text-paper dark:placeholder:text-ash"
                 />
                 <button
                   onClick={handleReject}
@@ -448,7 +456,7 @@ function RequestDetailCard({ request, onUpdate, autoConfirm, autoReject, autoRat
             )}
           </div>
         ) : (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-ash">
             Yêu cầu sẽ có nút xác nhận sau khi Trung tâm hoàn tất xử lý.
           </p>
         )}
