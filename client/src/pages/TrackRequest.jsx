@@ -112,10 +112,10 @@ export default function TrackRequest() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-    <div className="min-h-screen px-4 py-10 dark:bg-ink transition-colors duration-300">
+    <div className="min-h-screen px-4 pb-10 dark:bg-ink transition-colors duration-300">
       <OrganicBackdrop />
       <PublicNav theme={theme} onToggleTheme={toggleTheme} />
-      <div className="relative z-10 max-w-xl mx-auto">
+      <div className="relative z-10 max-w-xl mx-auto pt-10">
         <div className="mb-2 text-center">
           <div className="mb-4">
             <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
