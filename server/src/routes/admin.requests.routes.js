@@ -104,6 +104,56 @@ adminRequestsRouter.get(
   })
 );
 
+// Số lượng theo trạng thái — dùng cho bộ đếm trên các tab (Mới tiếp nhận/Đang xử lý/Chờ xác
+// nhận). Áp cùng bộ lọc với danh sách (trừ status/page) để số đếm khớp với những gì đang lọc.
+// Đăng ký TRƯỚC "/:id" để không bị nuốt nhầm thành id (Express khớp theo thứ tự đăng ký).
+adminRequestsRouter.get(
+  '/counts',
+  asyncHandler(async (req, res) => {
+    const {
+      department_id: departmentId,
+      request_type_id: requestTypeId,
+      priority,
+      assignee_email: assigneeEmail,
+      q,
+    } = req.query;
+
+    const conditions = [];
+    const params = [];
+    if (departmentId) {
+      conditions.push('department_id = ?');
+      params.push(departmentId);
+    }
+    if (requestTypeId) {
+      conditions.push('request_type_id = ?');
+      params.push(requestTypeId);
+    }
+    if (priority && PRIORITY_VALUES.has(priority)) {
+      conditions.push('priority = ?');
+      params.push(priority);
+    }
+    if (assigneeEmail) {
+      conditions.push('assignee_email = ?');
+      params.push(assigneeEmail);
+    }
+    if (q) {
+      conditions.push('(requester_name LIKE ? OR request_code LIKE ? OR requester_email LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const rows = db
+      .prepare(`SELECT status, COUNT(*) AS count FROM requests ${where} GROUP BY status`)
+      .all(...params);
+
+    const counts = {};
+    rows.forEach((r) => {
+      counts[r.status] = r.count;
+    });
+    res.json(counts);
+  })
+);
+
 adminRequestsRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {

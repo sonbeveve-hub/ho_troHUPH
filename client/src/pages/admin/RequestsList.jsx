@@ -7,9 +7,9 @@ import { StatusBadge, ProcessingTimeBadge, PriorityBadge, PRIORITY_META } from '
 
 const TABS = [
   { value: '', label: 'Tất cả' },
-  { value: 'new', label: 'Mới tiếp nhận' },
-  { value: 'in_progress', label: 'Đang xử lý' },
-  { value: 'resolved_pending', label: 'Chờ xác nhận' },
+  { value: 'new', label: 'Mới tiếp nhận', showCount: true },
+  { value: 'in_progress', label: 'Đang xử lý', showCount: true },
+  { value: 'resolved_pending', label: 'Chờ xác nhận', showCount: true },
   { value: 'reopened', label: 'Mở lại' },
   { value: 'done', label: 'Hoàn thành' },
   { value: 'done_auto', label: 'Tự động đóng' },
@@ -27,6 +27,7 @@ export default function RequestsList() {
   const [departments, setDepartments] = useState([]);
   const [requestTypes, setRequestTypes] = useState([]);
   const [result, setResult] = useState({ data: [], total: 0, pageSize: 20 });
+  const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -66,6 +67,22 @@ export default function RequestsList() {
       .finally(() => setLoading(false));
   }, [status, departmentId, requestTypeId, priority, q, page, assignedToMeOnly, me]);
 
+  // Bộ đếm cho các tab — dùng CÙNG bộ lọc với danh sách nhưng KHÔNG kèm status/page, để số đếm
+  // trên từng tab luôn khớp với các bộ lọc khác đang áp dụng (đơn vị, loại yêu cầu, "Của tôi"...).
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (departmentId) params.set('department_id', departmentId);
+    if (requestTypeId) params.set('request_type_id', requestTypeId);
+    if (priority) params.set('priority', priority);
+    if (q) params.set('q', q);
+    if (assignedToMeOnly && me?.username) params.set('assignee_email', me.username);
+
+    api
+      .get(`/admin/requests/counts?${params.toString()}`)
+      .then(setCounts)
+      .catch(() => {});
+  }, [departmentId, requestTypeId, priority, q, assignedToMeOnly, me]);
+
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
   return (
@@ -90,22 +107,34 @@ export default function RequestsList() {
       </div>
 
       <div className="flex flex-wrap items-center gap-1 mb-4 border-b border-slate-200">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => {
-              setStatus(t.value);
-              setPage(1);
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
-              status === t.value
-                ? 'border-brand-500 text-brand-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const count = t.showCount ? counts[t.value] || 0 : 0;
+          return (
+            <button
+              key={t.value}
+              onClick={() => {
+                setStatus(t.value);
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                status === t.value
+                  ? 'border-brand-500 text-brand-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {t.label}
+              {t.showCount && count > 0 && (
+                <span
+                  className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full px-1.5 text-xs font-semibold ${
+                    status === t.value ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-5">
