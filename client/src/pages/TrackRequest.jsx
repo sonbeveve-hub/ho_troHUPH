@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faHouse, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
@@ -101,6 +101,14 @@ export default function TrackRequest() {
     <div className="min-h-screen px-4 py-10">
       <OrganicBackdrop />
       <div className="relative z-10 max-w-xl mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-slate-500 hover:text-brand-700 transition"
+        >
+          <FontAwesomeIcon icon={faHouse} />
+          Về trang chủ
+        </Link>
+
         <div className="mb-2 text-center">
           <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-4" />
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
