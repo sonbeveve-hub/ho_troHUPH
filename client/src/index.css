@@ -39,3 +39,62 @@ body {
 .animate-count-up {
   animation: countUp 0.5s ease-out both;
 }
+
+/* ===== Chế độ tối cho khu quản trị =====
+   Khu quản trị dùng lại GẦN NHƯ Y HỆT một bộ class Tailwind (bg-white/70, bg-white/80,
+   text-slate-900/700/500/400, border-slate-200, divide-slate-100...) lặp lại xuyên suốt ~15
+   trang CRUD giống nhau. Thay vì phải sửa tay "dark:" vào từng chỗ ở từng file, ghi đè thẳng
+   các class quen thuộc đó khi nằm trong ".dark" (gắn ở gốc AdminLayout) — 1 chỗ, áp dụng toàn
+   khu quản trị, không cần đụng vào từng trang. Cụ thể theo màu (component đã tự có "dark:"
+   riêng như StatusBadge) vẫn ưu tiên áp dụng bình thường vì đứng sau trong thứ tự CSS.
+   Đặt SAU "@tailwind utilities" nên luôn thắng cascade so với class gốc (không cần !important). */
+.dark .bg-white\/95 { background-color: rgba(23, 24, 27, 0.95); }
+.dark .bg-white\/80 { background-color: rgba(23, 24, 27, 0.8); }
+.dark .bg-white\/70 { background-color: rgba(31, 32, 36, 0.7); }
+.dark .bg-white\/60 { background-color: rgba(23, 24, 27, 0.6); }
+.dark .bg-white\/50 { background-color: rgba(31, 32, 36, 0.5); }
+.dark .bg-white\/20 { background-color: rgba(255, 255, 255, 0.1); }
+.dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.06); }
+.dark .bg-slate-50 { background-color: #1F2024; }
+.dark .bg-slate-200 { background-color: rgba(255, 255, 255, 0.12); }
+
+.dark .text-slate-900,
+.dark .text-slate-800 { color: #FCFCFC; }
+.dark .text-slate-700 { color: rgba(252, 252, 252, 0.9); }
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-slate-400 { color: #7C7C74; }
+
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .border-slate-50,
+.dark .border-white\/60 { border-color: rgba(255, 255, 255, 0.1); }
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255, 255, 255, 0.08); }
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-white:hover { background-color: #1F2024; }
+.dark .hover\:text-slate-900:hover,
+.dark .hover\:text-slate-800:hover,
+.dark .hover\:text-slate-700:hover { color: #FCFCFC; }
+
+/* Chữ màu thương hiệu (link "Sửa", trạng thái đang chọn...) — xanh đậm brand-600/700 tương
+   phản quá thấp trên nền gần đen, đổi sang lime để vẫn đọc được rõ. NGOẠI TRỪ khi nằm trong
+   nút nền nhạt bg-brand-50 (vd. "Xác nhận thay người gửi") — nút đó tự đủ tương phản, đổi
+   sang lime sẽ ngược lại làm khó đọc (lime trên nền xanh nhạt). */
+.dark .text-brand-500,
+.dark .text-brand-600,
+.dark .text-brand-700 { color: #B2EE37; }
+.dark .bg-brand-50.text-brand-700 { color: #146B42; }
+
+/* Ô nhập/lựa chọn không đặt màu chữ riêng (dựa vào color: inherit từ Tailwind preflight) —
+   không ghi đè thì chữ sẽ mặc định đen, không đọc được trên nền ô nhập màu tối. */
+.dark input,
+.dark select,
+.dark textarea {
+  color: #FCFCFC;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #7C7C74;
+}

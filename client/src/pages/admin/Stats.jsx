@@ -7,6 +7,7 @@ import StatusBreakdown from '../../components/charts/StatusBreakdown.jsx';
 import CategoryBar from '../../components/charts/CategoryBar.jsx';
 import TimeSeries from '../../components/charts/TimeSeries.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
+import { useTheme } from '../../hooks/useTheme.js';
 
 const STATUS_LABEL = {
   new: 'Mới tiếp nhận',
@@ -28,6 +29,7 @@ const STATUS_DOT = {
 };
 
 export default function Stats() {
+  const [theme] = useTheme('hotro-admin-theme');
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState([]);
   const [byAssignee, setByAssignee] = useState([]);
@@ -91,22 +93,22 @@ export default function Stats() {
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Theo trạng thái</h2>
-          <StatusBreakdown byStatus={summary.byStatus} />
+          <StatusBreakdown byStatus={summary.byStatus} theme={theme} />
         </div>
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Theo đơn vị</h2>
-          <CategoryBar data={summary.byDepartment} />
+          <CategoryBar data={summary.byDepartment} theme={theme} />
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Theo loại yêu cầu</h2>
-          <CategoryBar data={summary.byRequestType} color="#3FAE7C" />
+          <CategoryBar data={summary.byRequestType} color="#3FAE7C" theme={theme} />
         </div>
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 p-5">
           <h2 className="font-semibold text-slate-900 mb-3">Số yêu cầu theo ngày (30 ngày gần nhất)</h2>
-          <TimeSeries data={timeseries} />
+          <TimeSeries data={timeseries} theme={theme} />
         </div>
       </div>
 
@@ -179,7 +181,7 @@ function ConfirmationStats({ stats }) {
                   <span className="w-8 text-slate-500 shrink-0 inline-flex items-center gap-0.5">
                     {star} <FontAwesomeIcon icon={faStar} className="text-[10px]" />
                   </span>
-                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                     <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>
@@ -247,7 +249,7 @@ function AiFeedbackStats({ stats }) {
                     <span className="w-8 text-slate-500 shrink-0 inline-flex items-center gap-0.5">
                     {star} <FontAwesomeIcon icon={faStar} className="text-[10px]" />
                   </span>
-                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                       <div className="h-full bg-amber-400" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="w-6 text-right text-slate-400 shrink-0">{count}</span>

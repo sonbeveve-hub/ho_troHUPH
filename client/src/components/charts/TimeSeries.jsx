@@ -2,10 +2,14 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 const BRAND = '#1B7A4D';
 
-export default function TimeSeries({ data }) {
+export default function TimeSeries({ data, theme }) {
   if (data.length === 0) {
-    return <p className="text-sm text-slate-400 py-8 text-center">Chưa có dữ liệu.</p>;
+    return <p className="text-sm text-slate-400 dark:text-ash py-8 text-center">Chưa có dữ liệu.</p>;
   }
+
+  const isDark = theme === 'dark';
+  const gridStroke = isDark ? '#2A2B30' : '#EEF0F5';
+  const axisTick = isDark ? '#7C7C74' : '#94A3B8';
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -16,18 +20,22 @@ export default function TimeSeries({ data }) {
             <stop offset="100%" stopColor={BRAND} stopOpacity={0.1} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#EEF0F5" />
+        <CartesianGrid vertical={false} stroke={gridStroke} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 11, fill: '#94A3B8' }}
+          tick={{ fontSize: 11, fill: axisTick }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(d) => d.slice(5)}
           minTickGap={24}
         />
-        <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} tickLine={false} width={28} />
+        <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: axisTick }} axisLine={false} tickLine={false} width={28} />
         <Tooltip
-          contentStyle={{ borderRadius: 8, border: '1px solid #EEF0F5', fontSize: 12 }}
+          contentStyle={
+            isDark
+              ? { borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', fontSize: 12, background: '#17181B', color: '#FCFCFC' }
+              : { borderRadius: 8, border: '1px solid #EEF0F5', fontSize: 12 }
+          }
           labelFormatter={(d) => `Ngày ${d}`}
         />
         <Area
