@@ -6,9 +6,9 @@ import { api } from '../api/client.js';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import PublicLogo from '../components/PublicLogo.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import { ChatBubbleIllustration, ShieldCheckIllustration, LaptopIllustration } from '../components/illustrations.jsx';
-import { FILE_TIME } from '../utils/cacheBust.js';
 
 export default function PublicFaq() {
   const [items, setItems] = useState(null);
@@ -39,7 +39,9 @@ export default function PublicFaq() {
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
       <div className="relative z-10 max-w-2xl mx-auto pt-12 sm:pt-16">
         <div className="mb-6 text-center">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-5" />
+          <div className="mb-5">
+            <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
+          </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent">
             Câu hỏi thường gặp
           </h1>

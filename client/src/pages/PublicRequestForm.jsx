@@ -10,6 +10,7 @@ import ChatWidget from '../components/ChatWidget.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
 import StatCounter from '../components/StatCounter.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import PublicLogo from '../components/PublicLogo.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import {
   LaptopIllustration,
@@ -20,7 +21,6 @@ import {
   TicketIllustration,
   WifiIllustration,
 } from '../components/illustrations.jsx';
-import { FILE_TIME } from '../utils/cacheBust.js';
 
 // eslint-disable-next-line no-undef
 const APP_VERSION = __APP_VERSION__;
@@ -178,11 +178,9 @@ export default function PublicRequestForm() {
       {/* ===== Hero ===== */}
       <div className="relative z-10 max-w-5xl mx-auto pt-12 sm:pt-16">
         <div className="text-center max-w-2xl mx-auto">
-          <img
-            src={`/logo.svg?filetime=${FILE_TIME}`}
-            alt="Trung tâm Tin học"
-            className="h-16 w-auto mx-auto mb-6 animate-fade-in-up"
-          />
+          <div className="mb-6 animate-fade-in-up">
+            <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
+          </div>
           <h1
             className="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent animate-fade-in-up"
             style={{ animationDelay: '80ms' }}

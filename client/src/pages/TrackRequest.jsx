@@ -7,9 +7,9 @@ import { api } from '../api/client.js';
 import { StatusBadge, ProcessingTimeBadge } from '../components/StatusBadge.jsx';
 import OrganicBackdrop from '../components/OrganicBackdrop.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import PublicLogo from '../components/PublicLogo.jsx';
 import { useTheme } from '../hooks/useTheme.js';
 import { TicketIllustration, ClockIllustration } from '../components/illustrations.jsx';
-import { FILE_TIME } from '../utils/cacheBust.js';
 
 const STATUS_ORDER = {
   new: 0,
@@ -115,7 +115,9 @@ export default function TrackRequest() {
         </Link>
 
         <div className="mb-2 text-center">
-          <img src={`/logo.svg?filetime=${FILE_TIME}`} alt="Trung tâm Tin học" className="h-16 w-auto mx-auto mb-4" />
+          <div className="mb-4">
+            <PublicLogo theme={theme} className="h-16 w-auto mx-auto" />
+          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-400 to-brand-600 dark:from-volt dark:to-mint bg-clip-text text-transparent">
             Tra cứu yêu cầu hỗ trợ
           </h1>
