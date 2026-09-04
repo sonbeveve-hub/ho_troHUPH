@@ -1,9 +1,9 @@
 import readline from 'node:readline/promises';
 import bcrypt from 'bcrypt';
-import { db } from '../src/db/index.js';
+import { db, closePool } from '../src/db/index.js';
 import { migrate } from '../src/db/migrate.js';
 
-migrate();
+await migrate();
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -18,18 +18,18 @@ try {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const existing = db.prepare('SELECT id FROM admin_users WHERE username = ?').get(username);
+  const existing = await db.get('SELECT id FROM admin_users WHERE username = ?', [username]);
   if (existing) {
-    db.prepare('UPDATE admin_users SET password_hash = ? WHERE username = ?').run(
+    await db.run('UPDATE admin_users SET password_hash = ? WHERE username = ?', [
       passwordHash,
-      username
-    );
+      username,
+    ]);
     console.log(`Đã cập nhật mật khẩu cho admin "${username}".`);
   } else {
-    db.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)').run(
+    await db.run('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)', [
       username,
-      passwordHash
-    );
+      passwordHash,
+    ]);
     console.log(`Đã tạo tài khoản admin "${username}".`);
   }
 } catch (err) {
@@ -37,4 +37,7 @@ try {
   process.exitCode = 1;
 } finally {
   rl.close();
+  // Đóng pool để script thoát hẳn — pg.Pool giữ tiến trình sống cho tới khi được đóng, khác
+  // better-sqlite3 (không có khái niệm kết nối/pool nên script tự thoát ngay sau finally).
+  await closePool();
 }

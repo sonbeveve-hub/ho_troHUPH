@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { normalizeText } from '../utils/normalizeText.js';
 
-export function lookupStaff({ name }) {
+export async function lookupStaff({ name }) {
   const normalized = normalizeText(name);
   if (!normalized || normalized.length < 2) return [];
 
@@ -10,9 +10,9 @@ export function lookupStaff({ name }) {
            departments.name AS department_name
     FROM staff
     LEFT JOIN departments ON departments.id = staff.department_id
-    WHERE staff.normalized_name LIKE ?
+    WHERE staff.normalized_name ILIKE ?
     ORDER BY staff.name LIMIT 20
   `;
 
-  return db.prepare(query).all(`%${normalized}%`);
+  return db.all(query, [`%${normalized}%`]);
 }

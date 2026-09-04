@@ -16,35 +16,35 @@ adminStatsRouter.use(requireAdmin);
 adminStatsRouter.get(
   '/summary',
   asyncHandler(async (req, res) => {
-    res.json(getSummary());
+    res.json(await getSummary());
   })
 );
 
 adminStatsRouter.get(
   '/by-assignee',
   asyncHandler(async (req, res) => {
-    res.json(getByAssignee());
+    res.json(await getByAssignee());
   })
 );
 
 adminStatsRouter.get(
   '/ai',
   asyncHandler(async (req, res) => {
-    res.json(getAiStats());
+    res.json(await getAiStats());
   })
 );
 
 adminStatsRouter.get(
   '/confirmation',
   asyncHandler(async (req, res) => {
-    res.json(getConfirmationStats());
+    res.json(await getConfirmationStats());
   })
 );
 
 adminStatsRouter.get(
   '/export',
   asyncHandler(async (req, res) => {
-    const buffer = buildStatsWorkbook();
+    const buffer = await buildStatsWorkbook();
     const filename = `bao-cao-ho-tro-${new Date().toISOString().slice(0, 10)}.xlsx`;
     res.setHeader(
       'Content-Type',
@@ -59,6 +59,6 @@ adminStatsRouter.get(
   '/timeseries',
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
-    res.json(getTimeseries(days));
+    res.json(await getTimeseries(days));
   })
 );

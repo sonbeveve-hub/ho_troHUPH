@@ -18,83 +18,71 @@ const PRIORITY_LABELS = {
   P4: 'P4 - Thấp',
 };
 
-export function getSummary() {
-  const total = db.prepare('SELECT COUNT(*) AS count FROM requests').get().count;
+export async function getSummary() {
+  const total = (await db.get('SELECT COUNT(*) AS count FROM requests')).count;
 
-  const byStatus = db
-    .prepare('SELECT status, COUNT(*) AS count FROM requests GROUP BY status')
-    .all();
+  const byStatus = await db.all('SELECT status, COUNT(*) AS count FROM requests GROUP BY status');
 
-  const byDepartment = db
-    .prepare(
-      `SELECT departments.name AS label, COUNT(*) AS count
-       FROM requests LEFT JOIN departments ON departments.id = requests.department_id
-       GROUP BY requests.department_id ORDER BY count DESC`
-    )
-    .all();
+  const byDepartment = await db.all(
+    `SELECT departments.name AS label, COUNT(*) AS count
+     FROM requests LEFT JOIN departments ON departments.id = requests.department_id
+     GROUP BY requests.department_id, departments.name ORDER BY count DESC`
+  );
 
-  const byRequestType = db
-    .prepare(
-      `SELECT request_types.name AS label, COUNT(*) AS count
-       FROM requests LEFT JOIN request_types ON request_types.id = requests.request_type_id
-       GROUP BY requests.request_type_id ORDER BY count DESC`
-    )
-    .all();
+  const byRequestType = await db.all(
+    `SELECT request_types.name AS label, COUNT(*) AS count
+     FROM requests LEFT JOIN request_types ON request_types.id = requests.request_type_id
+     GROUP BY requests.request_type_id, request_types.name ORDER BY count DESC`
+  );
 
   return { total, byStatus, byDepartment, byRequestType };
 }
 
-export function getByAssignee() {
-  return db
-    .prepare(
-      `SELECT
-         COALESCE(assignee_name, 'Chưa phân công') AS assignee_name,
-         assignee_email,
-         COUNT(*) AS total,
-         SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new_count,
-         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress_count,
-         SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS resolved_pending_count,
-         SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
-         SUM(CASE WHEN status IN ('done', 'done_auto') THEN 1 ELSE 0 END) AS done_count,
-         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count
-       FROM requests
-       GROUP BY COALESCE(assignee_email, '__unassigned__')
-       ORDER BY (assignee_email IS NULL), total DESC`
-    )
-    .all();
+export async function getByAssignee() {
+  return db.all(
+    `SELECT
+       COALESCE(assignee_name, 'Chưa phân công') AS assignee_name,
+       assignee_email,
+       COUNT(*) AS total,
+       SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new_count,
+       SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress_count,
+       SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS resolved_pending_count,
+       SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
+       SUM(CASE WHEN status IN ('done', 'done_auto') THEN 1 ELSE 0 END) AS done_count,
+       SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count
+     FROM requests
+     GROUP BY COALESCE(assignee_email, '__unassigned__'), assignee_name, assignee_email
+     ORDER BY (assignee_email IS NULL), total DESC`
+  );
 }
 
 // Thống kê giai đoạn xác nhận hoàn thành (Resolution & Closure): CSAT, tỷ lệ tự đóng do
 // không phản hồi, số lượt bị từ chối/mở lại, và thời gian chờ xác nhận trung bình.
-export function getConfirmationStats() {
-  const summary = db
-    .prepare(
-      `SELECT
-         SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS pending_count,
-         SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
-         SUM(CASE WHEN status = 'done' AND confirmed_by = 'requester' THEN 1 ELSE 0 END) AS confirmed_count,
-         SUM(CASE WHEN status = 'done' AND confirmed_by = 'delegate' THEN 1 ELSE 0 END) AS delegate_confirmed_count,
-         SUM(CASE WHEN status = 'done_auto' THEN 1 ELSE 0 END) AS auto_closed_count,
-         SUM(CASE WHEN escalated_at IS NOT NULL THEN 1 ELSE 0 END) AS escalated_count,
-         SUM(CASE WHEN csat_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
-         AVG(csat_rating) AS avg_rating,
-         AVG(CASE
-           WHEN requester_confirmed_at IS NOT NULL AND resolved_at IS NOT NULL
-           THEN (julianday(requester_confirmed_at) - julianday(resolved_at))
-         END) AS avg_confirm_wait_days
-       FROM requests`
-    )
-    .get();
+export async function getConfirmationStats() {
+  const summary = await db.get(
+    `SELECT
+       SUM(CASE WHEN status = 'resolved_pending' THEN 1 ELSE 0 END) AS pending_count,
+       SUM(CASE WHEN status = 'reopened' THEN 1 ELSE 0 END) AS reopened_count,
+       SUM(CASE WHEN status = 'done' AND confirmed_by = 'requester' THEN 1 ELSE 0 END) AS confirmed_count,
+       SUM(CASE WHEN status = 'done' AND confirmed_by = 'delegate' THEN 1 ELSE 0 END) AS delegate_confirmed_count,
+       SUM(CASE WHEN status = 'done_auto' THEN 1 ELSE 0 END) AS auto_closed_count,
+       SUM(CASE WHEN escalated_at IS NOT NULL THEN 1 ELSE 0 END) AS escalated_count,
+       SUM(CASE WHEN csat_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
+       AVG(csat_rating) AS avg_rating,
+       AVG(CASE
+         WHEN requester_confirmed_at IS NOT NULL AND resolved_at IS NOT NULL
+         THEN EXTRACT(EPOCH FROM (requester_confirmed_at - resolved_at)) / 86400.0
+       END) AS avg_confirm_wait_days
+     FROM requests`
+  );
 
-  const ratingBreakdown = db
-    .prepare(
-      `SELECT csat_rating AS rating, COUNT(*) AS count
-       FROM requests
-       WHERE csat_rating IS NOT NULL
-       GROUP BY csat_rating
-       ORDER BY csat_rating DESC`
-    )
-    .all();
+  const ratingBreakdown = await db.all(
+    `SELECT csat_rating AS rating, COUNT(*) AS count
+     FROM requests
+     WHERE csat_rating IS NOT NULL
+     GROUP BY csat_rating
+     ORDER BY csat_rating DESC`
+  );
 
   return {
     pendingCount: summary.pending_count || 0,
@@ -110,29 +98,25 @@ export function getConfirmationStats() {
   };
 }
 
-export function getAiStats() {
-  const summary = db
-    .prepare(
-      `SELECT
-         SUM(CASE WHEN ai_suggestion IS NOT NULL THEN 1 ELSE 0 END) AS total_suggested,
-         SUM(CASE WHEN ai_resolved = 1 THEN 1 ELSE 0 END) AS resolved_count,
-         SUM(CASE WHEN ai_resolved = 0 THEN 1 ELSE 0 END) AS unresolved_count,
-         SUM(CASE WHEN ai_suggestion IS NOT NULL AND ai_resolved IS NULL THEN 1 ELSE 0 END) AS no_feedback_count,
-         SUM(CASE WHEN ai_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
-         AVG(ai_rating) AS avg_rating
-       FROM requests`
-    )
-    .get();
+export async function getAiStats() {
+  const summary = await db.get(
+    `SELECT
+       SUM(CASE WHEN ai_suggestion IS NOT NULL THEN 1 ELSE 0 END) AS total_suggested,
+       SUM(CASE WHEN ai_resolved = 1 THEN 1 ELSE 0 END) AS resolved_count,
+       SUM(CASE WHEN ai_resolved = 0 THEN 1 ELSE 0 END) AS unresolved_count,
+       SUM(CASE WHEN ai_suggestion IS NOT NULL AND ai_resolved IS NULL THEN 1 ELSE 0 END) AS no_feedback_count,
+       SUM(CASE WHEN ai_rating IS NOT NULL THEN 1 ELSE 0 END) AS rating_count,
+       AVG(ai_rating) AS avg_rating
+     FROM requests`
+  );
 
-  const ratingBreakdown = db
-    .prepare(
-      `SELECT ai_rating AS rating, COUNT(*) AS count
-       FROM requests
-       WHERE ai_rating IS NOT NULL
-       GROUP BY ai_rating
-       ORDER BY ai_rating DESC`
-    )
-    .all();
+  const ratingBreakdown = await db.all(
+    `SELECT ai_rating AS rating, COUNT(*) AS count
+     FROM requests
+     WHERE ai_rating IS NOT NULL
+     GROUP BY ai_rating
+     ORDER BY ai_rating DESC`
+  );
 
   return {
     totalSuggested: summary.total_suggested || 0,
@@ -145,22 +129,21 @@ export function getAiStats() {
   };
 }
 
-export function getTimeseries(days = 30) {
-  return db
-    .prepare(
-      `SELECT date(created_at) AS date, COUNT(*) AS count
-       FROM requests
-       WHERE created_at >= datetime('now', ?)
-       GROUP BY date(created_at)
-       ORDER BY date ASC`
-    )
-    .all(`-${days} days`);
+export async function getTimeseries(days = 30) {
+  return db.all(
+    `SELECT created_at::date AS date, COUNT(*) AS count
+     FROM requests
+     WHERE created_at >= now() - make_interval(days => ?)
+     GROUP BY created_at::date
+     ORDER BY date ASC`,
+    [days]
+  );
 }
 
 // Xuất báo cáo Excel theo yêu cầu (không phải báo cáo tự động định kỳ) — admin bấm nút
 // "Xuất Excel" ở trang Tổng quan khi cần, tự chọn tần suất gửi cho ban lãnh đạo.
-export function buildStatsWorkbook() {
-  const summary = getSummary();
+export async function buildStatsWorkbook() {
+  const summary = await getSummary();
 
   const overviewRows = [
     ['Tổng số yêu cầu', summary.total],
@@ -177,20 +160,18 @@ export function buildStatsWorkbook() {
   const overviewSheet = XLSX.utils.aoa_to_sheet(overviewRows);
   overviewSheet['!cols'] = [{ wch: 40 }, { wch: 12 }];
 
-  const requests = db
-    .prepare(
-      `SELECT requests.request_code, requests.requester_name, requests.requester_email,
-              departments.name AS department_name, request_types.name AS request_type_name,
-              requests.priority, requests.status,
-              requests.assignee_name, requests.assignee_email,
-              requests.csat_rating, requests.reject_count,
-              requests.created_at, requests.updated_at
-       FROM requests
-       LEFT JOIN departments ON departments.id = requests.department_id
-       LEFT JOIN request_types ON request_types.id = requests.request_type_id
-       ORDER BY requests.created_at DESC`
-    )
-    .all();
+  const requests = await db.all(
+    `SELECT requests.request_code, requests.requester_name, requests.requester_email,
+            departments.name AS department_name, request_types.name AS request_type_name,
+            requests.priority, requests.status,
+            requests.assignee_name, requests.assignee_email,
+            requests.csat_rating, requests.reject_count,
+            requests.created_at, requests.updated_at
+     FROM requests
+     LEFT JOIN departments ON departments.id = requests.department_id
+     LEFT JOIN request_types ON request_types.id = requests.request_type_id
+     ORDER BY requests.created_at DESC`
+  );
 
   const listRows = [
     [

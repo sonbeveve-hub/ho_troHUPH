@@ -47,9 +47,7 @@ function uploadImages(req, res, next) {
 publicRouter.get(
   '/departments',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare('SELECT id, name FROM departments WHERE active = 1 ORDER BY sort_order, id')
-      .all();
+    const rows = await db.all('SELECT id, name FROM departments WHERE active = 1 ORDER BY sort_order, id');
     res.json(rows);
   })
 );
@@ -57,9 +55,9 @@ publicRouter.get(
 publicRouter.get(
   '/request-types',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare('SELECT id, name, description FROM request_types WHERE active = 1 ORDER BY sort_order, id')
-      .all();
+    const rows = await db.all(
+      'SELECT id, name, description FROM request_types WHERE active = 1 ORDER BY sort_order, id'
+    );
     res.json(rows);
   })
 );
@@ -67,9 +65,9 @@ publicRouter.get(
 publicRouter.get(
   '/processing-times',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare('SELECT id, name FROM processing_times WHERE active = 1 ORDER BY sort_order, id')
-      .all();
+    const rows = await db.all(
+      'SELECT id, name FROM processing_times WHERE active = 1 ORDER BY sort_order, id'
+    );
     res.json(rows);
   })
 );
@@ -77,16 +75,14 @@ publicRouter.get(
 publicRouter.get(
   '/faq',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare(
-        `SELECT faq_entries.id, faq_entries.question, faq_entries.answer,
-                request_types.name AS request_type_name
-         FROM faq_entries
-         LEFT JOIN request_types ON request_types.id = faq_entries.request_type_id
-         WHERE faq_entries.active = 1
-         ORDER BY faq_entries.created_at DESC`
-      )
-      .all();
+    const rows = await db.all(
+      `SELECT faq_entries.id, faq_entries.question, faq_entries.answer,
+              request_types.name AS request_type_name
+       FROM faq_entries
+       LEFT JOIN request_types ON request_types.id = faq_entries.request_type_id
+       WHERE faq_entries.active = 1
+       ORDER BY faq_entries.created_at DESC`
+    );
     res.json(rows);
   })
 );
@@ -96,14 +92,14 @@ publicRouter.get(
 publicRouter.get(
   '/public-stats',
   asyncHandler(async (req, res) => {
-    const totalRequests = db.prepare('SELECT COUNT(*) c FROM requests').get().c;
-    const resolvedCount = db
-      .prepare("SELECT COUNT(*) c FROM requests WHERE status IN ('done','done_auto')")
-      .get().c;
-    const csat = db
-      .prepare('SELECT AVG(csat_rating) avg, COUNT(*) c FROM requests WHERE csat_rating IS NOT NULL')
-      .get();
-    const departmentCount = db.prepare('SELECT COUNT(*) c FROM departments WHERE active = 1').get().c;
+    const totalRequests = (await db.get('SELECT COUNT(*) c FROM requests')).c;
+    const resolvedCount = (
+      await db.get("SELECT COUNT(*) c FROM requests WHERE status IN ('done','done_auto')")
+    ).c;
+    const csat = await db.get(
+      'SELECT AVG(csat_rating) avg, COUNT(*) c FROM requests WHERE csat_rating IS NOT NULL'
+    );
+    const departmentCount = (await db.get('SELECT COUNT(*) c FROM departments WHERE active = 1')).c;
 
     res.json({
       totalRequests,
@@ -118,7 +114,7 @@ publicRouter.get(
   '/staff/lookup',
   asyncHandler(async (req, res) => {
     const { name } = req.query;
-    const results = lookupStaff({ name: typeof name === 'string' ? name : '' });
+    const results = await lookupStaff({ name: typeof name === 'string' ? name : '' });
     res.json(results);
   })
 );
@@ -173,24 +169,33 @@ publicRouter.post(
     }
     if (!requesterEmail || !EMAIL_RE.test(String(requesterEmail).trim())) {
       errors.push('Vui lòng nhập email hợp lệ.');
+    } else if (env.allowedEmailDomains.length > 0) {
+      const domain = String(requesterEmail).trim().toLowerCase().split('@')[1] || '';
+      if (!env.allowedEmailDomains.includes(domain)) {
+        errors.push(
+          `Chỉ chấp nhận email công vụ của trường (${env.allowedEmailDomains.join(', ')}).`
+        );
+      }
     }
     if (!EMAIL_SOURCES.has(emailSource)) {
       errors.push('Thiếu thông tin nguồn email.');
     }
 
-    const dept = db
-      .prepare('SELECT id, name FROM departments WHERE id = ? AND active = 1')
-      .get(departmentId);
+    const dept = await db.get('SELECT id, name FROM departments WHERE id = ? AND active = 1', [
+      departmentId,
+    ]);
     if (!dept) errors.push('Khoa/phòng/đơn vị không hợp lệ.');
 
-    const type = db
-      .prepare('SELECT id, name, default_priority FROM request_types WHERE id = ? AND active = 1')
-      .get(requestTypeId);
+    const type = await db.get(
+      'SELECT id, name, default_priority FROM request_types WHERE id = ? AND active = 1',
+      [requestTypeId]
+    );
     if (!type) errors.push('Loại yêu cầu không hợp lệ.');
 
-    const processingTime = db
-      .prepare('SELECT id, name FROM processing_times WHERE id = ? AND active = 1')
-      .get(processingTimeId);
+    const processingTime = await db.get(
+      'SELECT id, name FROM processing_times WHERE id = ? AND active = 1',
+      [processingTimeId]
+    );
     if (!processingTime) errors.push('Thời gian xử lý mong muốn không hợp lệ.');
 
     if (errors.length) {
@@ -201,43 +206,43 @@ publicRouter.post(
     // phải cùng email/loại yêu cầu như trước. So với các yêu cầu đang "Mới tiếp nhận"/"Đang
     // xử lý" trong DUPLICATE_WINDOW_DAYS gần đây. Chỉ đánh dấu để admin xem xét gộp — KHÔNG
     // chặn việc gửi, tránh cản trở người gửi có vấn đề thật sự khác nhau.
-    const possibleDuplicate = findMostSimilarRequest(String(description).trim(), {
+    const possibleDuplicate = await findMostSimilarRequest(String(description).trim(), {
       statuses: ['new', 'in_progress'],
       windowDays: env.duplicateWindowDays,
       threshold: env.duplicateSimilarityThreshold,
     });
 
-    const insert = db.prepare(`
-      INSERT INTO requests
-        (request_code, requester_name, department_id, request_type_id, processing_time_id,
-         description, requester_email, email_source, status, ip_address, possible_duplicate_of_id, priority)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)
-    `);
-
-    const info = insert.run(
-      'TEMP',
-      String(requesterName).trim(),
-      Number(departmentId),
-      Number(requestTypeId),
-      Number(processingTimeId),
-      String(description).trim(),
-      String(requesterEmail).trim(),
-      emailSource,
-      req.ip || null,
-      possibleDuplicate ? possibleDuplicate.id : null,
-      type.default_priority
+    const info = await db.run(
+      `INSERT INTO requests
+         (request_code, requester_name, department_id, request_type_id, processing_time_id,
+          description, requester_email, email_source, status, ip_address, possible_duplicate_of_id, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?) RETURNING id`,
+      [
+        'TEMP',
+        String(requesterName).trim(),
+        Number(departmentId),
+        Number(requestTypeId),
+        Number(processingTimeId),
+        String(description).trim(),
+        String(requesterEmail).trim(),
+        emailSource,
+        req.ip || null,
+        possibleDuplicate ? possibleDuplicate.id : null,
+        type.default_priority,
+      ]
     );
 
     const requestCode = `REQ-${String(info.lastInsertRowid).padStart(6, '0')}`;
-    db.prepare('UPDATE requests SET request_code = ? WHERE id = ?').run(
+    await db.run('UPDATE requests SET request_code = ? WHERE id = ?', [
       requestCode,
-      info.lastInsertRowid
+      info.lastInsertRowid,
+    ]);
+    await db.run(
+      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'new', 'Yêu cầu được tạo')",
+      [info.lastInsertRowid]
     );
-    db.prepare(
-      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'new', 'Yêu cầu được tạo')"
-    ).run(info.lastInsertRowid);
 
-    saveRequestAttachments(info.lastInsertRowid, files);
+    await saveRequestAttachments(info.lastInsertRowid, files);
 
     await sendSubmissionConfirmationEmail(
       {
@@ -267,10 +272,11 @@ const TRACK_SELECT_BASE = `
   LEFT JOIN processing_times ON processing_times.id = requests.processing_time_id
 `;
 
-function getRequestHistory(requestId) {
-  return db
-    .prepare('SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
-    .all(requestId);
+async function getRequestHistory(requestId) {
+  return db.all(
+    'SELECT status, note, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC',
+    [requestId]
+  );
 }
 
 publicRouter.get(
@@ -281,19 +287,18 @@ publicRouter.get(
     if (q.length < 2) return res.json([]);
 
     const like = `%${q}%`;
-    const rows = db
-      .prepare(
-        `${TRACK_SELECT_BASE}
-         WHERE requests.request_code LIKE ?
-            OR requests.requester_name LIKE ?
-            OR requests.requester_email LIKE ?
-            OR departments.name LIKE ?
-         ORDER BY requests.created_at DESC
-         LIMIT 20`
-      )
-      .all(like, like, like, like);
+    const rows = await db.all(
+      `${TRACK_SELECT_BASE}
+       WHERE requests.request_code ILIKE ?
+          OR requests.requester_name ILIKE ?
+          OR requests.requester_email ILIKE ?
+          OR departments.name ILIKE ?
+       ORDER BY requests.created_at DESC
+       LIMIT 20`,
+      [like, like, like, like]
+    );
 
-    res.json(rows.map((r) => ({ ...r, history: getRequestHistory(r.id) })));
+    res.json(await Promise.all(rows.map(async (r) => ({ ...r, history: await getRequestHistory(r.id) }))));
   })
 );
 
@@ -301,12 +306,12 @@ publicRouter.get(
   '/track/:code',
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
-    const request = db
-      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
-      .get(req.params.code.trim().toUpperCase());
+    const request = await db.get(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`, [
+      req.params.code.trim().toUpperCase(),
+    ]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
-    res.json({ ...request, history: getRequestHistory(request.id) });
+    res.json({ ...request, history: await getRequestHistory(request.id) });
   })
 );
 
@@ -314,9 +319,9 @@ publicRouter.post(
   '/track/:code/confirm',
   trackRequestLimiter,
   asyncHandler(async (req, res) => {
-    const request = db
-      .prepare('SELECT * FROM requests WHERE request_code = ?')
-      .get(req.params.code.trim().toUpperCase());
+    const request = await db.get('SELECT * FROM requests WHERE request_code = ?', [
+      req.params.code.trim().toUpperCase(),
+    ]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
     if (request.status !== 'resolved_pending') {
@@ -327,15 +332,17 @@ publicRouter.post(
     const hasRating = Number.isInteger(rating) && rating >= 1 && rating <= 5;
 
     if (!request.requester_confirmed_at) {
-      db.prepare(
+      await db.run(
         `UPDATE requests
-         SET requester_confirmed_at = datetime('now'), status = 'done', confirmed_by = 'requester',
-             csat_rating = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      ).run(hasRating ? rating : null, request.id);
-      db.prepare(
-        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã được hỗ trợ')"
-      ).run(request.id);
+         SET requester_confirmed_at = now(), status = 'done', confirmed_by = 'requester',
+             csat_rating = ?, updated_at = now()
+         WHERE id = ?`,
+        [hasRating ? rating : null, request.id]
+      );
+      await db.run(
+        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã được hỗ trợ')",
+        [request.id]
+      );
       // Xác nhận qua nút trong email (một chạm) không có cơ hội chọn sao ngay — mời đánh giá
       // riêng qua email sau đó thay vì bỏ lỡ hoàn toàn.
       if (!hasRating) {
@@ -343,10 +350,10 @@ publicRouter.post(
       }
     }
 
-    const updated = db
-      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
-      .get(req.params.code.trim().toUpperCase());
-    res.json({ ...updated, history: getRequestHistory(request.id) });
+    const updated = await db.get(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`, [
+      req.params.code.trim().toUpperCase(),
+    ]);
+    res.json({ ...updated, history: await getRequestHistory(request.id) });
   })
 );
 
@@ -359,22 +366,23 @@ publicRouter.post(
       return res.status(400).json({ error: 'Đánh giá không hợp lệ.' });
     }
 
-    const request = db
-      .prepare('SELECT id, status, csat_rating FROM requests WHERE request_code = ?')
-      .get(req.params.code.trim().toUpperCase());
+    const request = await db.get(
+      'SELECT id, status, csat_rating FROM requests WHERE request_code = ?',
+      [req.params.code.trim().toUpperCase()]
+    );
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
     if (request.status !== 'done' && request.status !== 'done_auto') {
       return res.status(400).json({ error: 'Yêu cầu này chưa hoàn thành, chưa thể đánh giá.' });
     }
 
     if (request.csat_rating === null) {
-      db.prepare('UPDATE requests SET csat_rating = ? WHERE id = ?').run(rating, request.id);
+      await db.run('UPDATE requests SET csat_rating = ? WHERE id = ?', [rating, request.id]);
     }
 
-    const updated = db
-      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
-      .get(req.params.code.trim().toUpperCase());
-    res.json({ ...updated, history: getRequestHistory(request.id) });
+    const updated = await db.get(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`, [
+      req.params.code.trim().toUpperCase(),
+    ]);
+    res.json({ ...updated, history: await getRequestHistory(request.id) });
   })
 );
 
@@ -387,9 +395,9 @@ publicRouter.post(
       return res.status(400).json({ error: 'Vui lòng cho biết lý do chưa hài lòng.' });
     }
 
-    const request = db
-      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
-      .get(req.params.code.trim().toUpperCase());
+    const request = await db.get(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`, [
+      req.params.code.trim().toUpperCase(),
+    ]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
     if (request.status !== 'resolved_pending') {
       return res.status(400).json({ error: 'Yêu cầu này chưa ở trạng thái chờ xác nhận.' });
@@ -398,24 +406,26 @@ publicRouter.post(
     const nextRejectCount = request.reject_count + 1;
     const escalate = nextRejectCount >= 2;
 
-    db.prepare(
+    await db.run(
       `UPDATE requests
-       SET status = 'reopened', reject_count = ?, escalated_at = ${escalate ? "COALESCE(escalated_at, datetime('now'))" : 'escalated_at'},
-           updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(nextRejectCount, request.id);
+       SET status = 'reopened', reject_count = ?, escalated_at = ${escalate ? "COALESCE(escalated_at, now())" : 'escalated_at'},
+           updated_at = now()
+       WHERE id = ?`,
+      [nextRejectCount, request.id]
+    );
 
-    db.prepare(
-      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'reopened', ?)"
-    ).run(request.id, reason);
+    await db.run(
+      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'reopened', ?)",
+      [request.id, reason]
+    );
 
-    const updatedForEmail = db.prepare('SELECT * FROM requests WHERE id = ?').get(request.id);
+    const updatedForEmail = await db.get('SELECT * FROM requests WHERE id = ?', [request.id]);
     await sendReopenedNotificationEmail(updatedForEmail, reason, escalate);
 
-    const updated = db
-      .prepare(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`)
-      .get(req.params.code.trim().toUpperCase());
-    res.json({ ...updated, history: getRequestHistory(request.id) });
+    const updated = await db.get(`${TRACK_SELECT_BASE} WHERE requests.request_code = ?`, [
+      req.params.code.trim().toUpperCase(),
+    ]);
+    res.json({ ...updated, history: await getRequestHistory(request.id) });
   })
 );
 
@@ -430,9 +440,9 @@ const AI_CONTEXT_SELECT = `
 `;
 
 function getAttachmentsFor(requestId) {
-  return db
-    .prepare('SELECT stored_name, mime_type FROM request_attachments WHERE request_id = ?')
-    .all(requestId);
+  return db.all('SELECT stored_name, mime_type FROM request_attachments WHERE request_id = ?', [
+    requestId,
+  ]);
 }
 
 const MAX_RELEVANT_FAQS = 5;
@@ -440,14 +450,13 @@ const MAX_RELEVANT_FAQS = 5;
 // Lấy các FAQ liên quan để làm ngữ cảnh bổ sung cho AI: ưu tiên FAQ cùng loại yêu cầu,
 // sau đó tới FAQ chung (không gắn loại yêu cầu cụ thể). Giới hạn số lượng để prompt gọn.
 function getRelevantFaqs(requestTypeId) {
-  return db
-    .prepare(
-      `SELECT question, answer FROM faq_entries
-       WHERE active = 1 AND (request_type_id = ? OR request_type_id IS NULL)
-       ORDER BY (request_type_id = ?) DESC, created_at DESC
-       LIMIT ?`
-    )
-    .all(requestTypeId, requestTypeId, MAX_RELEVANT_FAQS);
+  return db.all(
+    `SELECT question, answer FROM faq_entries
+     WHERE active = 1 AND (request_type_id = ? OR request_type_id IS NULL)
+     ORDER BY (request_type_id = ?) DESC, created_at DESC
+     LIMIT ?`,
+    [requestTypeId, requestTypeId, MAX_RELEVANT_FAQS]
+  );
 }
 
 // Gợi ý khắc phục ban đầu từ AI (Gemini) — gọi ngay sau khi người gửi tạo yêu cầu thành công.
@@ -457,7 +466,7 @@ publicRouter.post(
   aiLimiter,
   asyncHandler(async (req, res) => {
     const code = req.params.code.trim().toUpperCase();
-    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    const request = await db.get(AI_CONTEXT_SELECT, [code]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
     if (request.ai_suggestion) {
@@ -473,11 +482,11 @@ publicRouter.post(
         description: request.description,
         departmentName: request.department_name,
         requestTypeName: request.request_type_name,
-        attachments: getAttachmentsFor(request.id),
-        relevantFaqs: getRelevantFaqs(request.request_type_id),
+        attachments: await getAttachmentsFor(request.id),
+        relevantFaqs: await getRelevantFaqs(request.request_type_id),
       });
       if (suggestion) {
-        db.prepare('UPDATE requests SET ai_suggestion = ? WHERE id = ?').run(suggestion, request.id);
+        await db.run('UPDATE requests SET ai_suggestion = ? WHERE id = ?', [suggestion, request.id]);
       }
       res.json({ suggestion, configured: true });
     } catch (err) {
@@ -499,18 +508,19 @@ publicRouter.post(
       return res.status(400).json({ error: 'Thiếu thông tin phản hồi.' });
     }
 
-    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    const request = await db.get(AI_CONTEXT_SELECT, [code]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
-    db.prepare('UPDATE requests SET ai_resolved = ? WHERE id = ?').run(resolved ? 1 : 0, request.id);
+    await db.run('UPDATE requests SET ai_resolved = ? WHERE id = ?', [resolved ? 1 : 0, request.id]);
 
     if (resolved) {
-      db.prepare("UPDATE requests SET status = 'done', updated_at = datetime('now') WHERE id = ?").run(
-        request.id
+      await db.run("UPDATE requests SET status = 'done', updated_at = now() WHERE id = ?", [
+        request.id,
+      ]);
+      await db.run(
+        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã khắc phục được theo gợi ý của Trợ lý AI')",
+        [request.id]
       );
-      db.prepare(
-        "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', 'Người gửi xác nhận đã khắc phục được theo gợi ý của Trợ lý AI')"
-      ).run(request.id);
       return res.json({ ok: true });
     }
 
@@ -527,12 +537,15 @@ publicRouter.post(
         description: request.description,
         departmentName: request.department_name,
         requestTypeName: request.request_type_name,
-        attachments: getAttachmentsFor(request.id),
+        attachments: await getAttachmentsFor(request.id),
         previousSuggestion: request.ai_suggestion,
-        relevantFaqs: getRelevantFaqs(request.request_type_id),
+        relevantFaqs: await getRelevantFaqs(request.request_type_id),
       });
       if (suggestion) {
-        db.prepare('UPDATE requests SET ai_alternative_suggestion = ? WHERE id = ?').run(suggestion, request.id);
+        await db.run('UPDATE requests SET ai_alternative_suggestion = ? WHERE id = ?', [
+          suggestion,
+          request.id,
+        ]);
       }
       res.json({ suggestion });
     } catch (err) {
@@ -552,7 +565,10 @@ publicRouter.post(
       return res.status(400).json({ error: 'Đánh giá không hợp lệ.' });
     }
 
-    const info = db.prepare('UPDATE requests SET ai_rating = ? WHERE request_code = ?').run(rating, code);
+    const info = await db.run('UPDATE requests SET ai_rating = ? WHERE request_code = ?', [
+      rating,
+      code,
+    ]);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
 
     res.json({ ok: true });
@@ -574,7 +590,7 @@ publicRouter.post(
       return res.status(400).json({ error: 'Nội dung quá dài.' });
     }
 
-    const request = db.prepare(AI_CONTEXT_SELECT).get(code);
+    const request = await db.get(AI_CONTEXT_SELECT, [code]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu với mã này.' });
     if (!isGeminiConfigured()) {
       return res.json({ reply: null });
@@ -586,10 +602,10 @@ publicRouter.post(
         description: request.description,
         departmentName: request.department_name,
         requestTypeName: request.request_type_name,
-        attachments: getAttachmentsFor(request.id),
+        attachments: await getAttachmentsFor(request.id),
         history: Array.isArray(history) ? history.slice(-20) : [],
         userMessage: message.trim(),
-        relevantFaqs: getRelevantFaqs(request.request_type_id),
+        relevantFaqs: await getRelevantFaqs(request.request_type_id),
       });
       res.json({ reply });
     } catch (err) {

@@ -27,7 +27,7 @@ adminStaffRouter.get(
     const conditions = [];
     const params = [];
     if (q) {
-      conditions.push('staff.normalized_name LIKE ?');
+      conditions.push('staff.normalized_name ILIKE ?');
       params.push(`%${normalizeText(q)}%`);
     }
     if (departmentId) {
@@ -36,17 +36,16 @@ adminStaffRouter.get(
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const total = db.prepare(`SELECT COUNT(*) AS count FROM staff ${where}`).get(...params).count;
-    const rows = db
-      .prepare(
-        `SELECT staff.*, departments.name AS department_name,
-                admin_users.role AS account_role, admin_users.status AS account_status
-         FROM staff
-         LEFT JOIN departments ON departments.id = staff.department_id
-         LEFT JOIN admin_users ON admin_users.username = staff.email AND staff.email IS NOT NULL
-         ${where} ORDER BY staff.name LIMIT ? OFFSET ?`
-      )
-      .all(...params, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+    const total = (await db.get(`SELECT COUNT(*) AS count FROM staff ${where}`, params)).count;
+    const rows = await db.all(
+      `SELECT staff.*, departments.name AS department_name,
+              admin_users.role AS account_role, admin_users.status AS account_status
+       FROM staff
+       LEFT JOIN departments ON departments.id = staff.department_id
+       LEFT JOIN admin_users ON admin_users.username = staff.email AND staff.email IS NOT NULL
+       ${where} ORDER BY staff.name LIMIT ? OFFSET ?`,
+      [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE]
+    );
 
     res.json({ data: rows, page, pageSize: PAGE_SIZE, total });
   })
@@ -59,9 +58,10 @@ adminStaffRouter.post(
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Vui lòng nhập tên.' });
     }
-    const info = db
-      .prepare('INSERT INTO staff (name, normalized_name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)')
-      .run(String(name).trim(), normalizeText(name), email || null, phone || null, departmentId || null);
+    const info = await db.run(
+      'INSERT INTO staff (name, normalized_name, email, phone, department_id) VALUES (?, ?, ?, ?, ?) RETURNING id',
+      [String(name).trim(), normalizeText(name), email || null, phone || null, departmentId || null]
+    );
     res.status(201).json({ id: info.lastInsertRowid });
   })
 );
@@ -69,21 +69,22 @@ adminStaffRouter.post(
 adminStaffRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM staff WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
     const { name, email, phone, departmentId } = req.body || {};
     const nextName = name !== undefined ? String(name).trim() : existing.name;
 
-    db.prepare(
-      `UPDATE staff SET name = ?, normalized_name = ?, email = ?, phone = ?, department_id = ?, updated_at = datetime('now') WHERE id = ?`
-    ).run(
-      nextName,
-      normalizeText(nextName),
-      email !== undefined ? email : existing.email,
-      phone !== undefined ? phone : existing.phone,
-      departmentId !== undefined ? departmentId : existing.department_id,
-      req.params.id
+    await db.run(
+      `UPDATE staff SET name = ?, normalized_name = ?, email = ?, phone = ?, department_id = ?, updated_at = now() WHERE id = ?`,
+      [
+        nextName,
+        normalizeText(nextName),
+        email !== undefined ? email : existing.email,
+        phone !== undefined ? phone : existing.phone,
+        departmentId !== undefined ? departmentId : existing.department_id,
+        req.params.id,
+      ]
     );
     res.json({ ok: true });
   })
@@ -92,7 +93,7 @@ adminStaffRouter.patch(
 adminStaffRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    db.prepare('DELETE FROM staff WHERE id = ?').run(req.params.id);
+    await db.run('DELETE FROM staff WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   })
 );
@@ -102,7 +103,7 @@ adminStaffRouter.post(
   upload.single('file'),
   asyncHandler(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn file Excel.' });
-    const result = importStaffFromExcel(req.file.buffer);
+    const result = await importStaffFromExcel(req.file.buffer);
     res.json(result);
   })
 );
@@ -114,7 +115,7 @@ adminStaffRouter.post(
   '/:id/grant-account',
   requireSuperAdmin,
   asyncHandler(async (req, res) => {
-    const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(req.params.id);
+    const staff = await db.get('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     if (!staff) return res.status(404).json({ error: 'Không tìm thấy nhân sự.' });
     if (!staff.email || !EMAIL_RE.test(staff.email)) {
       return res.status(400).json({ error: 'Nhân sự cần có email hợp lệ trước khi cấp tài khoản.' });
@@ -130,14 +131,13 @@ adminStaffRouter.post(
 
     const passwordHash = await bcrypt.hash(String(password), 10);
     try {
-      const info = db
-        .prepare(
-          `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
-           VALUES (?, ?, ?, ?, ?, 'active')`
-        )
-        .run(staff.email, passwordHash, staff.name, staff.email, role);
+      const info = await db.run(
+        `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
+         VALUES (?, ?, ?, ?, ?, 'active') RETURNING id`,
+        [staff.email, passwordHash, staff.name, staff.email, role]
+      );
 
-      logAudit({
+      await logAudit({
         actorId: req.session.adminId,
         action: 'user_create',
         newValue: `${staff.name} (${staff.email}, ${role}) — cấp từ hồ sơ nhân sự #${staff.id}`,
@@ -145,7 +145,7 @@ adminStaffRouter.post(
 
       res.status(201).json({ id: info.lastInsertRowid });
     } catch (err) {
-      if (String(err.message).includes('UNIQUE')) {
+      if (err.code === '23505') {
         return res.status(409).json({ error: 'Email này đã có tài khoản đăng nhập.' });
       }
       throw err;
@@ -159,11 +159,11 @@ adminStaffRouter.patch(
   '/:id/account',
   requireSuperAdmin,
   asyncHandler(async (req, res) => {
-    const staff = db.prepare('SELECT * FROM staff WHERE id = ?').get(req.params.id);
+    const staff = await db.get('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     if (!staff) return res.status(404).json({ error: 'Không tìm thấy nhân sự.' });
     if (!staff.email) return res.status(400).json({ error: 'Nhân sự chưa có email.' });
 
-    const account = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(staff.email);
+    const account = await db.get('SELECT * FROM admin_users WHERE username = ?', [staff.email]);
     if (!account) return res.status(404).json({ error: 'Nhân sự này chưa có tài khoản đăng nhập.' });
 
     const { role, status, password } = req.body || {};
@@ -187,21 +187,21 @@ adminStaffRouter.patch(
 
     if (password) {
       const passwordHash = await bcrypt.hash(String(password), 10);
-      db.prepare('UPDATE admin_users SET role = ?, status = ?, password_hash = ? WHERE id = ?').run(
+      await db.run('UPDATE admin_users SET role = ?, status = ?, password_hash = ? WHERE id = ?', [
         next.role,
         next.status,
         passwordHash,
-        account.id
-      );
+        account.id,
+      ]);
     } else {
-      db.prepare('UPDATE admin_users SET role = ?, status = ? WHERE id = ?').run(
+      await db.run('UPDATE admin_users SET role = ?, status = ? WHERE id = ?', [
         next.role,
         next.status,
-        account.id
-      );
+        account.id,
+      ]);
     }
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       action: 'user_update',
       oldRow: { role: account.role, status: account.status },
@@ -209,7 +209,7 @@ adminStaffRouter.patch(
       fields: ['role', 'status'],
     });
     if (password) {
-      logAudit({ actorId: req.session.adminId, action: 'user_password_reset', newValue: staff.email });
+      await logAudit({ actorId: req.session.adminId, action: 'user_password_reset', newValue: staff.email });
     }
 
     res.json({ ok: true });

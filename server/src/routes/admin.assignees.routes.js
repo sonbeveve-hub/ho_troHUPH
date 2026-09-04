@@ -15,14 +15,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 adminAssigneesRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare(
-        `SELECT assignees.*, admin_users.role AS account_role, admin_users.status AS account_status
-         FROM assignees
-         LEFT JOIN admin_users ON admin_users.username = assignees.email
-         ORDER BY assignees.name`
-      )
-      .all();
+    const rows = await db.all(
+      `SELECT assignees.*, admin_users.role AS account_role, admin_users.status AS account_status
+       FROM assignees
+       LEFT JOIN admin_users ON admin_users.username = assignees.email
+       ORDER BY assignees.name`
+    );
     res.json(rows);
   })
 );
@@ -38,10 +36,11 @@ adminAssigneesRouter.post(
     }
     if (errors.length) return res.status(400).json({ error: errors.join(' ') });
 
-    const info = db
-      .prepare('INSERT INTO assignees (name, email, phone) VALUES (?, ?, ?)')
-      .run(String(name).trim(), String(email).trim(), phone ? String(phone).trim() : null);
-    logAudit({
+    const info = await db.run(
+      'INSERT INTO assignees (name, email, phone) VALUES (?, ?, ?) RETURNING id',
+      [String(name).trim(), String(email).trim(), phone ? String(phone).trim() : null]
+    );
+    await logAudit({
       actorId: req.session.adminId,
       action: 'assignee_change',
       fieldName: 'assignees.created',
@@ -54,7 +53,7 @@ adminAssigneesRouter.post(
 adminAssigneesRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM assignees WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM assignees WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
     const { name, email, phone, active } = req.body || {};
@@ -73,15 +72,15 @@ adminAssigneesRouter.patch(
       active: active !== undefined ? (active ? 1 : 0) : existing.active,
     };
 
-    db.prepare('UPDATE assignees SET name = ?, email = ?, phone = ?, active = ? WHERE id = ?').run(
+    await db.run('UPDATE assignees SET name = ?, email = ?, phone = ?, active = ? WHERE id = ?', [
       next.name,
       next.email,
       next.phone,
       next.active,
-      req.params.id
-    );
+      req.params.id,
+    ]);
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       action: 'assignee_change',
       oldRow: existing,
@@ -96,10 +95,10 @@ adminAssigneesRouter.patch(
 adminAssigneesRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT name FROM assignees WHERE id = ?').get(req.params.id);
-    const info = db.prepare('DELETE FROM assignees WHERE id = ?').run(req.params.id);
+    const existing = await db.get('SELECT name FROM assignees WHERE id = ?', [req.params.id]);
+    const info = await db.run('DELETE FROM assignees WHERE id = ?', [req.params.id]);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       action: 'assignee_change',
       fieldName: 'assignees.deleted',
@@ -115,7 +114,7 @@ adminAssigneesRouter.post(
   '/:id/grant-account',
   requireSuperAdmin,
   asyncHandler(async (req, res) => {
-    const assignee = db.prepare('SELECT * FROM assignees WHERE id = ?').get(req.params.id);
+    const assignee = await db.get('SELECT * FROM assignees WHERE id = ?', [req.params.id]);
     if (!assignee) return res.status(404).json({ error: 'Không tìm thấy người phụ trách.' });
     if (!assignee.email || !EMAIL_RE.test(assignee.email)) {
       return res.status(400).json({ error: 'Người phụ trách cần có email hợp lệ trước khi cấp tài khoản.' });
@@ -131,14 +130,13 @@ adminAssigneesRouter.post(
 
     const passwordHash = await bcrypt.hash(String(password), 10);
     try {
-      const info = db
-        .prepare(
-          `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
-           VALUES (?, ?, ?, ?, ?, 'active')`
-        )
-        .run(assignee.email, passwordHash, assignee.name, assignee.email, role);
+      const info = await db.run(
+        `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
+         VALUES (?, ?, ?, ?, ?, 'active') RETURNING id`,
+        [assignee.email, passwordHash, assignee.name, assignee.email, role]
+      );
 
-      logAudit({
+      await logAudit({
         actorId: req.session.adminId,
         action: 'user_create',
         newValue: `${assignee.name} (${assignee.email}, ${role}) — cấp từ danh sách người phụ trách #${assignee.id}`,
@@ -146,7 +144,7 @@ adminAssigneesRouter.post(
 
       res.status(201).json({ id: info.lastInsertRowid });
     } catch (err) {
-      if (String(err.message).includes('UNIQUE')) {
+      if (err.code === '23505') {
         return res.status(409).json({ error: 'Email này đã có tài khoản đăng nhập.' });
       }
       throw err;
@@ -159,11 +157,11 @@ adminAssigneesRouter.patch(
   '/:id/account',
   requireSuperAdmin,
   asyncHandler(async (req, res) => {
-    const assignee = db.prepare('SELECT * FROM assignees WHERE id = ?').get(req.params.id);
+    const assignee = await db.get('SELECT * FROM assignees WHERE id = ?', [req.params.id]);
     if (!assignee) return res.status(404).json({ error: 'Không tìm thấy người phụ trách.' });
     if (!assignee.email) return res.status(400).json({ error: 'Người phụ trách chưa có email.' });
 
-    const account = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(assignee.email);
+    const account = await db.get('SELECT * FROM admin_users WHERE username = ?', [assignee.email]);
     if (!account) return res.status(404).json({ error: 'Người phụ trách này chưa có tài khoản đăng nhập.' });
 
     const { role, status, password } = req.body || {};
@@ -187,21 +185,21 @@ adminAssigneesRouter.patch(
 
     if (password) {
       const passwordHash = await bcrypt.hash(String(password), 10);
-      db.prepare('UPDATE admin_users SET role = ?, status = ?, password_hash = ? WHERE id = ?').run(
+      await db.run('UPDATE admin_users SET role = ?, status = ?, password_hash = ? WHERE id = ?', [
         next.role,
         next.status,
         passwordHash,
-        account.id
-      );
+        account.id,
+      ]);
     } else {
-      db.prepare('UPDATE admin_users SET role = ?, status = ? WHERE id = ?').run(
+      await db.run('UPDATE admin_users SET role = ?, status = ? WHERE id = ?', [
         next.role,
         next.status,
-        account.id
-      );
+        account.id,
+      ]);
     }
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       action: 'user_update',
       oldRow: { role: account.role, status: account.status },
@@ -209,7 +207,7 @@ adminAssigneesRouter.patch(
       fields: ['role', 'status'],
     });
     if (password) {
-      logAudit({ actorId: req.session.adminId, action: 'user_password_reset', newValue: assignee.email });
+      await logAudit({ actorId: req.session.adminId, action: 'user_password_reset', newValue: assignee.email });
     }
 
     res.json({ ok: true });

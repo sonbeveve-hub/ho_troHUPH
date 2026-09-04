@@ -1,6 +1,8 @@
 node_modules/
 .env
 cloudflared/config.yml
+cloudflared/config.docker.yml
+cloudflared/credentials/
 cloudflared/*.exe
 .claude/settings.local.json
 server/data/*.db

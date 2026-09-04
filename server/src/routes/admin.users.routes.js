@@ -13,11 +13,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 adminUsersRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = db
-      .prepare(
-        'SELECT id, username, full_name, email, role, status, last_login_at, created_at FROM admin_users ORDER BY created_at ASC'
-      )
-      .all();
+    const rows = await db.all(
+      'SELECT id, username, full_name, email, role, status, last_login_at, created_at FROM admin_users ORDER BY created_at ASC'
+    );
     res.json(rows);
   })
 );
@@ -37,14 +35,13 @@ adminUsersRouter.post(
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     try {
-      const info = db
-        .prepare(
-          `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
-           VALUES (?, ?, ?, ?, ?, 'active')`
-        )
-        .run(trimmedEmail, passwordHash, String(fullName).trim(), trimmedEmail, role);
+      const info = await db.run(
+        `INSERT INTO admin_users (username, password_hash, full_name, email, role, status)
+         VALUES (?, ?, ?, ?, ?, 'active') RETURNING id`,
+        [trimmedEmail, passwordHash, String(fullName).trim(), trimmedEmail, role]
+      );
 
-      logAudit({
+      await logAudit({
         actorId: req.session.adminId,
         action: 'user_create',
         newValue: `${String(fullName).trim()} (${trimmedEmail}, ${role})`,
@@ -52,7 +49,9 @@ adminUsersRouter.post(
 
       res.status(201).json({ id: info.lastInsertRowid });
     } catch (err) {
-      if (String(err.message).includes('UNIQUE')) {
+      // '23505' = unique_violation (mã lỗi chuẩn của Postgres), thay cho việc dò chuỗi "UNIQUE"
+      // trong message lỗi kiểu SQLite trước đây.
+      if (err.code === '23505') {
         return res.status(409).json({ error: 'Email này đã được dùng cho tài khoản khác.' });
       }
       throw err;
@@ -63,7 +62,7 @@ adminUsersRouter.post(
 adminUsersRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM admin_users WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM admin_users WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
 
     const { fullName, role, status } = req.body || {};
@@ -84,14 +83,14 @@ adminUsersRouter.patch(
       status: status !== undefined ? status : existing.status,
     };
 
-    db.prepare('UPDATE admin_users SET full_name = ?, role = ?, status = ? WHERE id = ?').run(
+    await db.run('UPDATE admin_users SET full_name = ?, role = ?, status = ? WHERE id = ?', [
       next.full_name,
       next.role,
       next.status,
-      req.params.id
-    );
+      req.params.id,
+    ]);
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       action: 'user_update',
       oldRow: existing,

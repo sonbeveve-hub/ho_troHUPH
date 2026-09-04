@@ -21,7 +21,7 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
   router.get(
     path,
     asyncHandler(async (req, res) => {
-      const rows = db.prepare(`SELECT * FROM ${table} ORDER BY sort_order, id`).all();
+      const rows = await db.all(`SELECT * FROM ${table} ORDER BY sort_order, id`);
       res.json(rows);
     })
   );
@@ -33,18 +33,20 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
       if (!name || !String(name).trim()) {
         return res.status(400).json({ error: 'Vui lòng nhập tên.' });
       }
-      const nextSortOrder = db
-        .prepare(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`)
-        .get().next;
+      const nextSortOrder = (
+        await db.get(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`)
+      ).next;
       try {
         const info = hasDescription
-          ? db
-              .prepare(`INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?)`)
-              .run(String(name).trim(), description || null, nextSortOrder)
-          : db
-              .prepare(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`)
-              .run(String(name).trim(), nextSortOrder);
-        logAudit({
+          ? await db.run(
+              `INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?) RETURNING id`,
+              [String(name).trim(), description || null, nextSortOrder]
+            )
+          : await db.run(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?) RETURNING id`, [
+              String(name).trim(),
+              nextSortOrder,
+            ]);
+        await logAudit({
           actorId: req.session.adminId,
           action: 'category_change',
           fieldName: `${table}.created`,
@@ -52,7 +54,7 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
         });
         res.status(201).json({ id: info.lastInsertRowid });
       } catch (err) {
-        if (String(err.message).includes('UNIQUE')) {
+        if (err.code === '23505') {
           return res.status(409).json({ error: 'Tên này đã tồn tại.' });
         }
         throw err;
@@ -68,23 +70,31 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
         return res.status(400).json({ error: 'Hướng di chuyển không hợp lệ.' });
       }
 
-      const current = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
+      const current = await db.get(`SELECT * FROM ${table} WHERE id = ?`, [req.params.id]);
       if (!current) return res.status(404).json({ error: 'Không tìm thấy.' });
 
       const neighbor =
         direction === 'up'
-          ? db
-              .prepare(`SELECT * FROM ${table} WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1`)
-              .get(current.sort_order)
-          : db
-              .prepare(`SELECT * FROM ${table} WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1`)
-              .get(current.sort_order);
+          ? await db.get(
+              `SELECT * FROM ${table} WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1`,
+              [current.sort_order]
+            )
+          : await db.get(
+              `SELECT * FROM ${table} WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1`,
+              [current.sort_order]
+            );
 
       if (neighbor) {
-        db.transaction(() => {
-          db.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`).run(neighbor.sort_order, current.id);
-          db.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`).run(current.sort_order, neighbor.id);
-        })();
+        await db.transaction(async (tx) => {
+          await tx.run(`UPDATE ${table} SET sort_order = ? WHERE id = ?`, [
+            neighbor.sort_order,
+            current.id,
+          ]);
+          await tx.run(`UPDATE ${table} SET sort_order = ? WHERE id = ?`, [
+            current.sort_order,
+            neighbor.id,
+          ]);
+        });
       }
 
       res.json({ ok: true });
@@ -95,7 +105,7 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
     `${path}/:id`,
     asyncHandler(async (req, res) => {
       const { name, description, active } = req.body || {};
-      const existing = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(req.params.id);
+      const existing = await db.get(`SELECT * FROM ${table} WHERE id = ?`, [req.params.id]);
       if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
       const next = {
@@ -109,23 +119,23 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
       };
 
       if (hasDescription) {
-        db.prepare(`UPDATE ${table} SET name = ?, description = ?, active = ? WHERE id = ?`).run(
+        await db.run(`UPDATE ${table} SET name = ?, description = ?, active = ? WHERE id = ?`, [
           next.name,
           next.description,
           next.active,
-          req.params.id
-        );
+          req.params.id,
+        ]);
       } else {
-        db.prepare(`UPDATE ${table} SET name = ?, active = ? WHERE id = ?`).run(
+        await db.run(`UPDATE ${table} SET name = ?, active = ? WHERE id = ?`, [
           next.name,
           next.active,
-          req.params.id
-        );
+          req.params.id,
+        ]);
       }
       const changedFields = ['name', 'active', ...(hasDescription ? ['description'] : [])];
       for (const field of changedFields) {
         if (existing[field] !== next[field]) {
-          logAudit({
+          await logAudit({
             actorId: req.session.adminId,
             action: 'category_change',
             fieldName: `${table}.${field}`,
@@ -142,10 +152,10 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
     `${path}/:id`,
     asyncHandler(async (req, res) => {
       try {
-        const existing = db.prepare(`SELECT name FROM ${table} WHERE id = ?`).get(req.params.id);
-        const info = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(req.params.id);
+        const existing = await db.get(`SELECT name FROM ${table} WHERE id = ?`, [req.params.id]);
+        const info = await db.run(`DELETE FROM ${table} WHERE id = ?`, [req.params.id]);
         if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
-        logAudit({
+        await logAudit({
           actorId: req.session.adminId,
           action: 'category_change',
           fieldName: `${table}.deleted`,
@@ -153,7 +163,9 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
         });
         res.json({ ok: true });
       } catch (err) {
-        if (String(err.message).includes('FOREIGN KEY')) {
+        // '23503' = foreign_key_violation (mã lỗi chuẩn Postgres), thay cho dò chuỗi
+        // "FOREIGN KEY" trong message lỗi kiểu SQLite trước đây.
+        if (err.code === '23503') {
           return res.status(409).json({
             error: 'Không thể xoá vì đang có yêu cầu sử dụng mục này. Hãy dùng "Vô hiệu hoá" thay thế.',
           });
@@ -168,7 +180,7 @@ function registerCategoryRoutes(router, path, table, hasDescription, importFn) {
     upload.single('file'),
     asyncHandler(async (req, res) => {
       if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn file Excel.' });
-      const result = importFn(req.file.buffer);
+      const result = await importFn(req.file.buffer);
       res.json(result);
     })
   );
@@ -206,14 +218,14 @@ adminCategoriesRouter.patch(
     if (!PRIORITY_VALUES.has(defaultPriority)) {
       return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
     }
-    const existing = db.prepare('SELECT * FROM request_types WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM request_types WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
-    db.prepare('UPDATE request_types SET default_priority = ? WHERE id = ?').run(
+    await db.run('UPDATE request_types SET default_priority = ? WHERE id = ?', [
       defaultPriority,
-      req.params.id
-    );
-    logAudit({
+      req.params.id,
+    ]);
+    await logAudit({
       actorId: req.session.adminId,
       action: 'category_change',
       fieldName: 'request_types.default_priority',

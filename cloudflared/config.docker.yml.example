@@ -1,0 +1,14 @@
+# Copy thành config.docker.yml, điền đúng tunnel ID (đã tạo từ trước, xem README.md/RESTORE.md).
+# Khác duy nhất so với config.yml (chạy trực tiếp trên Windows, không qua Docker):
+#   - credentials-file trỏ vào đường dẫn TRONG container (đã mount ở docker-compose.yml),
+#     không phải đường dẫn Windows C:\Users\...
+#   - service trỏ vào "http://app:4000" (tên service Docker), không phải "http://localhost:4000",
+#     vì trong mạng nội bộ Docker, "localhost" chỉ là chính container cloudflared, không phải
+#     container app.
+tunnel: <TUNNEL_ID_ĐÃ_TẠO>
+credentials-file: /etc/cloudflared/credentials/<TUNNEL_ID_ĐÃ_TẠO>.json
+
+ingress:
+  - hostname: hotrohuph.site
+    service: http://app:4000
+  - service: http_status:404

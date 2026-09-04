@@ -15,9 +15,10 @@ adminAuthRouter.post(
     }
 
     const identifier = String(username).trim();
-    const admin = db
-      .prepare('SELECT * FROM admin_users WHERE username = ? OR email = ?')
-      .get(identifier, identifier);
+    const admin = await db.get('SELECT * FROM admin_users WHERE username = ? OR email = ?', [
+      identifier,
+      identifier,
+    ]);
     if (!admin) {
       return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu.' });
     }
@@ -30,8 +31,8 @@ adminAuthRouter.post(
       return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu.' });
     }
 
-    db.prepare("UPDATE admin_users SET last_login_at = datetime('now') WHERE id = ?").run(admin.id);
-    logAudit({ actorId: admin.id, action: 'login' });
+    await db.run("UPDATE admin_users SET last_login_at = now() WHERE id = ?", [admin.id]);
+    await logAudit({ actorId: admin.id, action: 'login' });
 
     req.session.adminId = admin.id;
     req.session.adminUsername = admin.username;

@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hotro}
+      POSTGRES_USER: ${POSTGRES_USER:-hotro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Dữ liệu thật (toàn bộ request/staff/...) giờ nằm ở đây thay vì server/data/app.db —
+      # backup/khôi phục dữ liệu DB giờ là sao lưu volume Docker này (hoặc pg_dump), KHÔNG còn
+      # là copy file .db như trước — xem RESTORE.md, cần cập nhật lại quy trình backup.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-hotro} -d ${POSTGRES_DB:-hotro}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Không expose port ra ngoài host — chỉ container "app" cần truy cập, qua mạng nội bộ compose
+    # bằng tên service "postgres" (xem DATABASE_URL trong .env.example).
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Ghi đè NODE_ENV bất kể .env chứa gì — production là bắt buộc để app.js phục vụ
+      # client/dist tĩnh (xem điều kiện `env.nodeEnv === 'production'` trong server/src/app.js).
+      NODE_ENV: production
+    volumes:
+      # Giờ chỉ còn file đính kèm (ảnh) — database đã chuyển sang Postgres (volume postgres_data
+      # ở trên), không còn app.db trong thư mục này nữa.
+      - ./server/data:/app/server/data
+    ports:
+      # Cổng 80 mở ra CẢ mạng LAN trường (0.0.0.0, không phải 127.0.0.1) — để domain nội bộ do
+      # phòng CNTT trỏ thẳng IP máy này vào truy cập được bằng http://<domain nội bộ> (không cần
+      # gõ thêm :4000). Truy cập công khai (hotrohuph.site) vẫn đi qua container cloudflared bên
+      # dưới, KHÔNG qua cổng này — 2 đường độc lập nhau, cùng vào 1 app.
+      - '0.0.0.0:80:4000'
+      # Giữ thêm cổng 4000 chỉ cho chính máy này, tiện debug (curl http://localhost:4000) mà
+      # không cần đi qua domain nào.
+      - '127.0.0.1:4000:4000'
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/faq', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    depends_on:
+      - app
+    volumes:
+      - ./cloudflared/config.docker.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared/credentials:/etc/cloudflared/credentials:ro
+
+volumes:
+  postgres_data:

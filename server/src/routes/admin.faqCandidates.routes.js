@@ -13,9 +13,10 @@ adminFaqCandidatesRouter.get(
     const status = ['pending', 'approved', 'rejected'].includes(req.query.status)
       ? req.query.status
       : 'pending';
-    const rows = db
-      .prepare('SELECT * FROM faq_candidates WHERE status = ? ORDER BY created_at DESC')
-      .all(status);
+    const rows = await db.all(
+      'SELECT * FROM faq_candidates WHERE status = ? ORDER BY created_at DESC',
+      [status]
+    );
     res.json(rows.map((r) => ({ ...r, request_ids: JSON.parse(r.request_ids) })));
   })
 );
@@ -23,7 +24,7 @@ adminFaqCandidatesRouter.get(
 adminFaqCandidatesRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM faq_candidates WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM faq_candidates WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
     if (existing.status !== 'pending') {
       return res.status(400).json({ error: 'Đề xuất này đã được xử lý.' });
@@ -38,9 +39,11 @@ adminFaqCandidatesRouter.patch(
       return res.status(400).json({ error: 'Câu hỏi và câu trả lời không được để trống.' });
     }
 
-    db.prepare(
-      'UPDATE faq_candidates SET suggested_question = ?, suggested_answer = ? WHERE id = ?'
-    ).run(next.question, next.answer, req.params.id);
+    await db.run('UPDATE faq_candidates SET suggested_question = ?, suggested_answer = ? WHERE id = ?', [
+      next.question,
+      next.answer,
+      req.params.id,
+    ]);
     res.json({ ok: true });
   })
 );
@@ -48,7 +51,7 @@ adminFaqCandidatesRouter.patch(
 adminFaqCandidatesRouter.post(
   '/:id/approve',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM faq_candidates WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM faq_candidates WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
     if (existing.status !== 'pending') {
       return res.status(400).json({ error: 'Đề xuất này đã được xử lý.' });
@@ -57,26 +60,21 @@ adminFaqCandidatesRouter.post(
     const requestIds = JSON.parse(existing.request_ids);
     const sourceRequestId = requestIds[0] || null;
     const sourceRequest = sourceRequestId
-      ? db.prepare('SELECT request_type_id FROM requests WHERE id = ?').get(sourceRequestId)
+      ? await db.get('SELECT request_type_id FROM requests WHERE id = ?', [sourceRequestId])
       : null;
 
-    const info = db
-      .prepare(
-        `INSERT INTO faq_entries (question, answer, request_type_id, source_request_id)
-         VALUES (?, ?, ?, ?)`
-      )
-      .run(
-        existing.suggested_question,
-        existing.suggested_answer,
-        sourceRequest?.request_type_id || null,
-        sourceRequestId
-      );
+    const info = await db.run(
+      `INSERT INTO faq_entries (question, answer, request_type_id, source_request_id)
+       VALUES (?, ?, ?, ?) RETURNING id`,
+      [existing.suggested_question, existing.suggested_answer, sourceRequest?.request_type_id || null, sourceRequestId]
+    );
 
-    db.prepare(
-      "UPDATE faq_candidates SET status = 'approved', reviewed_by = ?, reviewed_at = datetime('now') WHERE id = ?"
-    ).run(req.session.adminId, req.params.id);
+    await db.run(
+      "UPDATE faq_candidates SET status = 'approved', reviewed_by = ?, reviewed_at = now() WHERE id = ?",
+      [req.session.adminId, req.params.id]
+    );
 
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       action: 'faq_candidate_change',
       fieldName: 'faq_candidates.approved',
@@ -90,17 +88,18 @@ adminFaqCandidatesRouter.post(
 adminFaqCandidatesRouter.post(
   '/:id/reject',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM faq_candidates WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM faq_candidates WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
     if (existing.status !== 'pending') {
       return res.status(400).json({ error: 'Đề xuất này đã được xử lý.' });
     }
 
-    db.prepare(
-      "UPDATE faq_candidates SET status = 'rejected', reviewed_by = ?, reviewed_at = datetime('now') WHERE id = ?"
-    ).run(req.session.adminId, req.params.id);
+    await db.run(
+      "UPDATE faq_candidates SET status = 'rejected', reviewed_by = ?, reviewed_at = now() WHERE id = ?",
+      [req.session.adminId, req.params.id]
+    );
 
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       action: 'faq_candidate_change',
       fieldName: 'faq_candidates.rejected',

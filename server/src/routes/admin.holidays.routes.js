@@ -14,7 +14,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 adminHolidaysRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = db.prepare('SELECT * FROM holidays ORDER BY recurring DESC, date ASC').all();
+    const rows = await db.all('SELECT * FROM holidays ORDER BY recurring DESC, date ASC');
     res.json(rows);
   })
 );
@@ -29,10 +29,11 @@ adminHolidaysRouter.post(
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Vui lòng nhập tên ngày nghỉ.' });
     }
-    const info = db
-      .prepare('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, ?)')
-      .run(date, String(name).trim(), recurring ? 1 : 0);
-    logAudit({
+    const info = await db.run(
+      'INSERT INTO holidays (date, name, recurring) VALUES (?, ?, ?) RETURNING id',
+      [date, String(name).trim(), recurring ? 1 : 0]
+    );
+    await logAudit({
       actorId: req.session.adminId,
       action: 'holiday_change',
       fieldName: 'holidays.created',
@@ -45,10 +46,10 @@ adminHolidaysRouter.post(
 adminHolidaysRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT date, name FROM holidays WHERE id = ?').get(req.params.id);
-    const info = db.prepare('DELETE FROM holidays WHERE id = ?').run(req.params.id);
+    const existing = await db.get('SELECT date, name FROM holidays WHERE id = ?', [req.params.id]);
+    const info = await db.run('DELETE FROM holidays WHERE id = ?', [req.params.id]);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       action: 'holiday_change',
       fieldName: 'holidays.deleted',
@@ -63,7 +64,7 @@ adminHolidaysRouter.post(
   upload.single('file'),
   asyncHandler(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn file Excel.' });
-    const result = importHolidaysFromExcel(req.file.buffer);
+    const result = await importHolidaysFromExcel(req.file.buffer);
     res.json(result);
   })
 );

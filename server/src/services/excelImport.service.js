@@ -19,39 +19,30 @@ function pickColumn(row, aliases) {
   return '';
 }
 
-function nextSortOrder(table) {
-  return db.prepare(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`).get().next;
+// executor: bản get/all/run gắn với transaction đang chạy (không dùng "db" dùng chung) — để mọi
+// thao tác trong 1 lượt import nằm cùng 1 transaction, đúng như hành vi db.transaction() cũ.
+async function nextSortOrder(executor, table) {
+  return (await executor.get(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table}`)).next;
 }
 
-function resolveDepartmentId(departmentName) {
+async function resolveDepartmentId(executor, departmentName) {
   if (!departmentName) return null;
-  const existing = db
-    .prepare('SELECT id FROM departments WHERE name = ? COLLATE NOCASE')
-    .get(departmentName);
+  const existing = await executor.get('SELECT id FROM departments WHERE name ILIKE ?', [departmentName]);
   if (existing) return existing.id;
-  const info = db
-    .prepare('INSERT INTO departments (name, sort_order) VALUES (?, ?)')
-    .run(departmentName, nextSortOrder('departments'));
+  const sortOrder = await nextSortOrder(executor, 'departments');
+  const info = await executor.run('INSERT INTO departments (name, sort_order) VALUES (?, ?) RETURNING id', [
+    departmentName,
+    sortOrder,
+  ]);
   return info.lastInsertRowid;
 }
 
-export function importStaffFromExcel(buffer) {
+export async function importStaffFromExcel(buffer) {
   const rows = parseWorkbook(buffer);
   const result = { inserted: 0, updated: 0, errors: [] };
 
-  const findByEmail = db.prepare("SELECT id FROM staff WHERE email = ? COLLATE NOCASE AND email != ''");
-  const findByNameDept = db.prepare(
-    'SELECT id FROM staff WHERE normalized_name = ? AND department_id IS ?'
-  );
-  const insertStaff = db.prepare(
-    `INSERT INTO staff (name, normalized_name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)`
-  );
-  const updateStaff = db.prepare(
-    `UPDATE staff SET name = ?, normalized_name = ?, email = ?, phone = ?, department_id = ?, updated_at = datetime('now') WHERE id = ?`
-  );
-
-  const run = db.transaction(() => {
-    rows.forEach((row, index) => {
+  await db.transaction(async (tx) => {
+    for (const [index, row] of rows.entries()) {
       const name = pickColumn(row, ['Họ tên', 'Ho ten', 'Tên', 'Ten', 'Name', 'Họ và tên']);
       const email = pickColumn(row, ['Email', 'Mail', 'Địa chỉ email']);
       const phone = pickColumn(row, ['Số điện thoại', 'So dien thoai', 'SĐT', 'SDT', 'Phone', 'Điện thoại']);
@@ -65,67 +56,86 @@ export function importStaffFromExcel(buffer) {
 
       if (!name) {
         result.errors.push({ row: index + 2, reason: 'Thiếu tên' });
-        return;
+        continue;
       }
 
       const normalizedName = normalizeText(name);
-      const departmentId = resolveDepartmentId(departmentName);
+      const departmentId = await resolveDepartmentId(tx, departmentName);
 
       let existing = null;
-      if (email) existing = findByEmail.get(email);
-      if (!existing) existing = findByNameDept.get(normalizedName, departmentId);
+      if (email) {
+        existing = await tx.get("SELECT id FROM staff WHERE email ILIKE ? AND email != ''", [email]);
+      }
+      if (!existing) {
+        // "IS NOT DISTINCT FROM" thay cho "IS ?" kiểu SQLite (SQLite cho phép "IS" so sánh NULL-safe
+        // với bất kỳ giá trị nào; Postgres chỉ chấp nhận "IS" với NULL/TRUE/FALSE theo chuẩn SQL,
+        // không nhận tham số bind — "IS NOT DISTINCT FROM" là toán tử NULL-safe tương đương của Postgres).
+        existing = await tx.get(
+          'SELECT id FROM staff WHERE normalized_name = ? AND department_id IS NOT DISTINCT FROM ?',
+          [normalizedName, departmentId]
+        );
+      }
 
       if (existing) {
-        updateStaff.run(name, normalizedName, email || null, phone || null, departmentId, existing.id);
+        await tx.run(
+          `UPDATE staff SET name = ?, normalized_name = ?, email = ?, phone = ?, department_id = ?, updated_at = now() WHERE id = ?`,
+          [name, normalizedName, email || null, phone || null, departmentId, existing.id]
+        );
         result.updated += 1;
       } else {
-        insertStaff.run(name, normalizedName, email || null, phone || null, departmentId);
+        await tx.run(
+          `INSERT INTO staff (name, normalized_name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)`,
+          [name, normalizedName, email || null, phone || null, departmentId]
+        );
         result.inserted += 1;
       }
-    });
+    }
   });
 
-  run();
   return result;
 }
 
-function importSimpleCategory(buffer, table, hasDescription) {
+async function importSimpleCategory(buffer, table, hasDescription) {
   const rows = parseWorkbook(buffer);
   const result = { inserted: 0, updated: 0, errors: [] };
 
-  const findByName = db.prepare(`SELECT id FROM ${table} WHERE name = ? COLLATE NOCASE`);
-  const insert = hasDescription
-    ? db.prepare(`INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?)`)
-    : db.prepare(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`);
-  const update = hasDescription
-    ? db.prepare(`UPDATE ${table} SET description = ?, active = 1 WHERE id = ?`)
-    : db.prepare(`UPDATE ${table} SET active = 1 WHERE id = ?`);
-
-  const run = db.transaction(() => {
-    rows.forEach((row, index) => {
+  await db.transaction(async (tx) => {
+    for (const [index, row] of rows.entries()) {
       const name = pickColumn(row, ['Tên', 'Ten', 'Name']);
       const description = pickColumn(row, ['Mô tả', 'Mo ta', 'Description']);
 
       if (!name) {
         result.errors.push({ row: index + 2, reason: 'Thiếu tên' });
-        return;
+        continue;
       }
 
-      const existing = findByName.get(name);
+      const existing = await tx.get(`SELECT id FROM ${table} WHERE name ILIKE ?`, [name]);
       if (existing) {
-        if (hasDescription) update.run(description || null, existing.id);
-        else update.run(existing.id);
+        if (hasDescription) {
+          await tx.run(`UPDATE ${table} SET description = ?, active = 1 WHERE id = ?`, [
+            description || null,
+            existing.id,
+          ]);
+        } else {
+          await tx.run(`UPDATE ${table} SET active = 1 WHERE id = ?`, [existing.id]);
+        }
         result.updated += 1;
       } else {
-        const sortOrder = nextSortOrder(table);
-        if (hasDescription) insert.run(name, description || null, sortOrder);
-        else insert.run(name, sortOrder);
+        const sortOrder = await nextSortOrder(tx, table);
+        if (hasDescription) {
+          await tx.run(`INSERT INTO ${table} (name, description, sort_order) VALUES (?, ?, ?)`, [
+            name,
+            description || null,
+            sortOrder,
+          ]);
+        } else {
+          await tx.run(`INSERT INTO ${table} (name, sort_order) VALUES (?, ?)`, [name, sortOrder]);
+        }
         result.inserted += 1;
       }
-    });
+    }
   });
 
-  run();
   return result;
 }
 
@@ -185,14 +195,12 @@ function parseHolidayDate(rawValue, recurringOverride) {
   return null;
 }
 
-export function importHolidaysFromExcel(buffer) {
+export async function importHolidaysFromExcel(buffer) {
   const rows = parseWorkbook(buffer, { cellDates: true });
   const result = { inserted: 0, updated: 0, errors: [] };
 
-  const insert = db.prepare('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, ?)');
-
-  const run = db.transaction(() => {
-    rows.forEach((row, index) => {
+  await db.transaction(async (tx) => {
+    for (const [index, row] of rows.entries()) {
       const rawDate = row['Ngày'] ?? row['Ngay'] ?? row['Date'] ?? pickColumn(row, ['Ngày', 'Ngay', 'Date']);
       const name = pickColumn(row, ['Tên', 'Ten', 'Name']);
       const recurringRaw = pickColumn(row, ['Lặp lại', 'Lap lai', 'Recurring']).toLowerCase();
@@ -201,19 +209,22 @@ export function importHolidaysFromExcel(buffer) {
 
       if (!name) {
         result.errors.push({ row: index + 2, reason: 'Thiếu tên' });
-        return;
+        continue;
       }
       const parsed = parseHolidayDate(rawDate, recurringOverride);
       if (!parsed) {
         result.errors.push({ row: index + 2, reason: 'Không đọc được ngày (dùng DD/MM hoặc DD/MM/YYYY)' });
-        return;
+        continue;
       }
 
-      insert.run(parsed.date, name, parsed.recurring);
+      await tx.run('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, ?)', [
+        parsed.date,
+        name,
+        parsed.recurring,
+      ]);
       result.inserted += 1;
-    });
+    }
   });
 
-  run();
   return result;
 }

@@ -1,0 +1,16 @@
+node_modules
+server/node_modules
+client/node_modules
+client/dist
+server/data
+.env
+.git
+.gitignore
+*.log
+cloudflared/credentials
+cloudflared/*.json
+cloudflared/*.exe
+cloudflared/config.yml
+cloudflared/config.docker.yml
+.claude
+docs

@@ -18,11 +18,11 @@ export async function runMonthlyReportSweep() {
   if (!env.notifyCcEmail) return;
 
   const yearMonth = currentYearMonth(now);
-  const already = db.prepare('SELECT 1 FROM monthly_reports WHERE year_month = ?').get(yearMonth);
+  const already = await db.get('SELECT 1 FROM monthly_reports WHERE year_month = ?', [yearMonth]);
   if (already) return;
 
-  const summary = getSummary();
-  const workbookBuffer = buildStatsWorkbook();
+  const summary = await getSummary();
+  const workbookBuffer = await buildStatsWorkbook();
   const { subject, html } = monthlyReportEmail({ summary, yearMonth });
 
   const result = await sendMonthlyReportEmail({
@@ -34,7 +34,7 @@ export async function runMonthlyReportSweep() {
   });
 
   if (result.sent) {
-    db.prepare('INSERT INTO monthly_reports (year_month) VALUES (?)').run(yearMonth);
+    await db.run('INSERT INTO monthly_reports (year_month) VALUES (?)', [yearMonth]);
   }
 }
 

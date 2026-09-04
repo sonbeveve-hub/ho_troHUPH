@@ -41,10 +41,11 @@ function getTransporter() {
   return transporter;
 }
 
-function logEmail({ requestId, to, subject, status, error }) {
-  db.prepare(
-    `INSERT INTO email_log (request_id, to_email, subject, status, error) VALUES (?, ?, ?, ?, ?)`
-  ).run(requestId, to, subject, status, error || null);
+async function logEmail({ requestId, to, subject, status, error }) {
+  await db.run(
+    `INSERT INTO email_log (request_id, to_email, subject, status, error) VALUES (?, ?, ?, ?, ?)`,
+    [requestId, to, subject, status, error || null]
+  );
 }
 
 // CC mặc định (nvd@huph.edu.vn) áp cho MỌI email hệ thống gửi ra, gộp thêm với
@@ -62,7 +63,7 @@ async function dispatchEmail({ requestId, to, cc, subject, html, isThreadRoot, a
   const transport = getTransporter();
 
   if (!transport) {
-    logEmail({ requestId: requestId ?? null, to, subject, status: 'skipped_no_config' });
+    await logEmail({ requestId: requestId ?? null, to, subject, status: 'skipped_no_config' });
     return { sent: false, reason: 'skipped_no_config' };
   }
 
@@ -84,11 +85,11 @@ async function dispatchEmail({ requestId, to, cc, subject, html, isThreadRoot, a
 
   try {
     await transport.sendMail(mailOptions);
-    logEmail({ requestId, to, subject, status: 'sent' });
+    await logEmail({ requestId, to, subject, status: 'sent' });
     return { sent: true };
   } catch (err) {
     console.error('[email] Gửi email thất bại:', err.message);
-    logEmail({ requestId, to, subject, status: 'failed', error: err.message });
+    await logEmail({ requestId, to, subject, status: 'failed', error: err.message });
     return { sent: false, reason: 'failed', error: err.message };
   }
 }

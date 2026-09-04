@@ -4,8 +4,8 @@ import { trigramSimilarity } from './similarity.service.js';
 
 // request đã từng nằm trong BẤT KỲ candidate nào (pending/approved/rejected) — không đề
 // xuất lại nhóm đã có ý kiến, kể cả khi quản lý đã từ chối.
-function getAlreadyGroupedIds() {
-  const rows = db.prepare('SELECT request_ids FROM faq_candidates').all();
+async function getAlreadyGroupedIds() {
+  const rows = await db.all('SELECT request_ids FROM faq_candidates');
   const ids = new Set();
   for (const row of rows) {
     try {
@@ -40,25 +40,18 @@ function groupBySimilarity(rows, threshold) {
 // mới cho mỗi nhóm đủ lớn (>= minGroupSize) chưa từng được đề xuất trước đó. Câu hỏi/trả lời
 // gợi ý lấy từ request có admin_notes dài nhất trong nhóm làm bản nháp — quản lý luôn phải
 // sửa lại trước khi duyệt (không gọi AI tóm tắt để tránh phát sinh chi phí API định kỳ).
-export function runFaqCandidateSweep() {
+export async function runFaqCandidateSweep() {
   const { minGroupSize } = env.faqCandidate;
-  const alreadyGrouped = getAlreadyGroupedIds();
+  const alreadyGrouped = await getAlreadyGroupedIds();
 
-  const rows = db
-    .prepare(
-      `SELECT id, description, admin_notes FROM requests
-       WHERE status = 'done' AND admin_notes IS NOT NULL AND trim(admin_notes) != ''`
-    )
-    .all()
-    .filter((r) => !alreadyGrouped.has(r.id));
+  const allRows = await db.all(
+    `SELECT id, description, admin_notes FROM requests
+     WHERE status = 'done' AND admin_notes IS NOT NULL AND trim(admin_notes) != ''`
+  );
+  const rows = allRows.filter((r) => !alreadyGrouped.has(r.id));
 
   const groups = groupBySimilarity(rows, env.duplicateSimilarityThreshold).filter(
     (g) => g.length >= minGroupSize
-  );
-
-  const insert = db.prepare(
-    `INSERT INTO faq_candidates (request_ids, suggested_question, suggested_answer)
-     VALUES (?, ?, ?)`
   );
 
   let created = 0;
@@ -66,10 +59,10 @@ export function runFaqCandidateSweep() {
     const draft = group.reduce((longest, r) =>
       (r.admin_notes || '').length > (longest.admin_notes || '').length ? r : longest
     );
-    insert.run(
-      JSON.stringify(group.map((r) => r.id)),
-      draft.description,
-      draft.admin_notes
+    await db.run(
+      `INSERT INTO faq_candidates (request_ids, suggested_question, suggested_answer)
+       VALUES (?, ?, ?)`,
+      [JSON.stringify(group.map((r) => r.id)), draft.description, draft.admin_notes]
     );
     created += 1;
   }
@@ -78,9 +71,9 @@ export function runFaqCandidateSweep() {
 
 export function startFaqCandidateSweep() {
   const intervalMs = env.faqCandidate.sweepIntervalHours * 60 * 60 * 1000;
-  const run = () => {
+  const run = async () => {
     try {
-      runFaqCandidateSweep();
+      await runFaqCandidateSweep();
     } catch (err) {
       console.error('[faq-candidate-sweep] Lỗi khi nhóm đề xuất FAQ:', err.message);
     }

@@ -12,29 +12,26 @@ function safeExtension(originalName) {
   return /^\.(jpg|jpeg|png|gif|webp|heic|heif|bmp)$/.test(ext) ? ext : '';
 }
 
-export function saveRequestAttachments(requestId, files) {
+export async function saveRequestAttachments(requestId, files) {
   if (!files || files.length === 0) return [];
 
   const dir = path.join(uploadsDir, String(requestId));
   fs.mkdirSync(dir, { recursive: true });
 
-  const insertAttachment = db.prepare(`
-    INSERT INTO request_attachments (request_id, stored_name, original_name, mime_type, size_bytes)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-
-  return files.map((file) => {
+  const saved = [];
+  // for...of (không dùng .map + Promise.all) để giữ đúng thứ tự ghi tuần tự như better-sqlite3
+  // trước đây — không quan trọng về hiệu năng (tối đa vài file/lần) nhưng dễ suy luận hơn.
+  for (const file of files) {
     const storedName = `${crypto.randomUUID()}${safeExtension(file.originalname)}`;
     fs.writeFileSync(path.join(dir, storedName), file.buffer);
-    const info = insertAttachment.run(
-      requestId,
-      storedName,
-      file.originalname,
-      file.mimetype,
-      file.size
+    const info = await db.run(
+      `INSERT INTO request_attachments (request_id, stored_name, original_name, mime_type, size_bytes)
+       VALUES (?, ?, ?, ?, ?) RETURNING id`,
+      [requestId, storedName, file.originalname, file.mimetype, file.size]
     );
-    return { id: info.lastInsertRowid, storedName, originalName: file.originalname };
-  });
+    saved.push({ id: info.lastInsertRowid, storedName, originalName: file.originalname });
+  }
+  return saved;
 }
 
 export function getAttachmentFilePath(requestId, storedName) {

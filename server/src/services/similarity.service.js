@@ -28,16 +28,17 @@ export function trigramSimilarity(a, b) {
 // Tìm request có nội dung mô tả giống nhất với description, trong số các request đang ở 1
 // trong các statuses chỉ định, tạo trong windowDays gần đây. Trả về { id, request_code,
 // similarity } của request giống nhất nếu vượt threshold, hoặc null nếu không có.
-export function findMostSimilarRequest(description, { statuses, windowDays, threshold, excludeId = null }) {
+export async function findMostSimilarRequest(description, { statuses, windowDays, threshold, excludeId = null }) {
   const placeholders = statuses.map(() => '?').join(',');
-  const candidates = db
-    .prepare(
-      `SELECT id, request_code, description FROM requests
-       WHERE status IN (${placeholders})
-         AND created_at >= datetime('now', ?)
-         ${excludeId ? 'AND id != ?' : ''}`
-    )
-    .all(...statuses, `-${windowDays} days`, ...(excludeId ? [excludeId] : []));
+  // make_interval(days => ?) thay cho datetime('now', '-N days') kiểu SQLite — nhận thẳng số
+  // nguyên ngày qua param, không cần tự ghép chuỗi interval.
+  const candidates = await db.all(
+    `SELECT id, request_code, description FROM requests
+     WHERE status IN (${placeholders})
+       AND created_at >= now() - make_interval(days => ?)
+       ${excludeId ? 'AND id != ?' : ''}`,
+    [...statuses, windowDays, ...(excludeId ? [excludeId] : [])]
+  );
 
   let best = null;
   for (const candidate of candidates) {

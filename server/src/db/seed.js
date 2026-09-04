@@ -46,37 +46,41 @@ const defaultHolidays = [
 // vô điều kiện mỗi lần server khởi động, dùng INSERT OR IGNORE theo tên — nhưng OR IGNORE chỉ
 // bỏ qua khi tên còn y nguyên, nên mỗi khi admin xoá hoặc đổi tên 1 mục mặc định, lần khởi động
 // kế tiếp sẽ tạo lại y hệt mục đó (hồi sinh mục đã xoá / tạo bản trùng cho mục đã đổi tên).
-export function seed() {
-  const deptCount = db.prepare('SELECT COUNT(*) AS c FROM departments').get().c;
-  const typeCount = db.prepare('SELECT COUNT(*) AS c FROM request_types').get().c;
-  const processingTimeCount = db.prepare('SELECT COUNT(*) AS c FROM processing_times').get().c;
-  const holidayCount = db.prepare('SELECT COUNT(*) AS c FROM holidays').get().c;
+export async function seed() {
+  const deptCount = (await db.get('SELECT COUNT(*) AS c FROM departments')).c;
+  const typeCount = (await db.get('SELECT COUNT(*) AS c FROM request_types')).c;
+  const processingTimeCount = (await db.get('SELECT COUNT(*) AS c FROM processing_times')).c;
+  const holidayCount = (await db.get('SELECT COUNT(*) AS c FROM holidays')).c;
 
-  const insertDept = db.prepare('INSERT OR IGNORE INTO departments (name, sort_order) VALUES (?, ?)');
-  const insertType = db.prepare(
-    'INSERT OR IGNORE INTO request_types (name, description, sort_order) VALUES (?, ?, ?)'
-  );
-  const insertProcessingTime = db.prepare(
-    'INSERT OR IGNORE INTO processing_times (name, sort_order) VALUES (?, ?)'
-  );
-  const insertHoliday = db.prepare('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, 1)');
-
-  const seedAll = db.transaction(() => {
-    if (deptCount === 0) {
-      defaultDepartments.forEach((name, index) => insertDept.run(name, index + 1));
+  await db.transaction(async (tx) => {
+    if (Number(deptCount) === 0) {
+      for (const [index, name] of defaultDepartments.entries()) {
+        await tx.run(
+          'INSERT INTO departments (name, sort_order) VALUES (?, ?) ON CONFLICT (name) DO NOTHING',
+          [name, index + 1]
+        );
+      }
     }
-    if (typeCount === 0) {
-      defaultRequestTypes.forEach(([name, description], index) =>
-        insertType.run(name, description, index + 1)
-      );
+    if (Number(typeCount) === 0) {
+      for (const [index, [name, description]] of defaultRequestTypes.entries()) {
+        await tx.run(
+          'INSERT INTO request_types (name, description, sort_order) VALUES (?, ?, ?) ON CONFLICT (name) DO NOTHING',
+          [name, description, index + 1]
+        );
+      }
     }
-    if (processingTimeCount === 0) {
-      defaultProcessingTimes.forEach((name, index) => insertProcessingTime.run(name, index + 1));
+    if (Number(processingTimeCount) === 0) {
+      for (const [index, name] of defaultProcessingTimes.entries()) {
+        await tx.run(
+          'INSERT INTO processing_times (name, sort_order) VALUES (?, ?) ON CONFLICT (name) DO NOTHING',
+          [name, index + 1]
+        );
+      }
     }
-    if (holidayCount === 0) {
-      defaultHolidays.forEach(([date, name]) => insertHoliday.run(date, name));
+    if (Number(holidayCount) === 0) {
+      for (const [date, name] of defaultHolidays) {
+        await tx.run('INSERT INTO holidays (date, name, recurring) VALUES (?, ?, 1)', [date, name]);
+      }
     }
   });
-
-  seedAll();
 }

@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
-import SqliteStoreFactory from 'better-sqlite3-session-store';
+import connectPgSimple from 'connect-pg-simple';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { env } from './config/env.js';
-import { db } from './db/index.js';
+import { pool } from './db/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { publicRouter } from './routes/public.routes.js';
 import { adminAuthRouter } from './routes/admin.auth.routes.js';
@@ -21,7 +21,7 @@ import { adminHolidaysRouter } from './routes/admin.holidays.routes.js';
 import { adminFaqCandidatesRouter } from './routes/admin.faqCandidates.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SqliteStore = SqliteStoreFactory(session);
+const PgStore = connectPgSimple(session);
 
 export function createApp() {
   const app = express();
@@ -41,9 +41,10 @@ export function createApp() {
 
   app.use(
     session({
-      store: new SqliteStore({
-        client: db,
-        expired: { clear: true, intervalMs: 15 * 60 * 1000 },
+      store: new PgStore({
+        pool,
+        createTableIfMissing: true,
+        pruneSessionInterval: 15 * 60, // giây (khác better-sqlite3-session-store dùng ms)
       }),
       secret: env.sessionSecret,
       resave: false,
@@ -51,7 +52,12 @@ export function createApp() {
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7,
         sameSite: 'lax',
-        secure: env.nodeEnv === 'production',
+        // 'auto' (không phải true cứng) vì cùng 1 server giờ nhận request từ 2 đường: qua
+        // Cloudflare Tunnel (HTTPS, req.secure=true nhờ "trust proxy" + X-Forwarded-Proto) VÀ
+        // qua domain nội bộ trường (HTTP thường, không có TLS) — 'auto' để express-session tự
+        // đặt cờ Secure theo TỪNG request, không thì phiên đăng nhập qua domain nội bộ sẽ luôn
+        // không lưu được (trình duyệt bỏ qua cookie Secure trên kết nối HTTP thường).
+        secure: env.nodeEnv === 'production' ? 'auto' : false,
       },
     })
   );

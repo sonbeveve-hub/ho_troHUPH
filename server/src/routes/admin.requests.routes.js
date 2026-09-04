@@ -80,25 +80,22 @@ adminRequestsRouter.get(
       params.push(assigneeEmail);
     }
     if (q) {
-      conditions.push('(requests.requester_name LIKE ? OR requests.request_code LIKE ? OR requests.requester_email LIKE ?)');
+      conditions.push('(requests.requester_name ILIKE ? OR requests.request_code ILIKE ? OR requests.requester_email ILIKE ?)');
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const total = db
-      .prepare(`SELECT COUNT(*) AS count FROM requests ${where}`)
-      .get(...params).count;
+    const total = (await db.get(`SELECT COUNT(*) AS count FROM requests ${where}`, params)).count;
 
     // Sắp theo mức độ ưu tiên trước (P1 < P4 theo thứ tự chữ, đúng thứ tự ưu tiên mong
     // muốn); trong cùng mức độ thì mới nhất lên trước.
-    const rows = db
-      .prepare(
-        `${LIST_SELECT} ${where}
-         ORDER BY requests.priority ASC, requests.created_at DESC
-         LIMIT ? OFFSET ?`
-      )
-      .all(...params, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+    const rows = await db.all(
+      `${LIST_SELECT} ${where}
+       ORDER BY requests.priority ASC, requests.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, PAGE_SIZE, (page - 1) * PAGE_SIZE]
+    );
 
     res.json({ data: rows, page, pageSize: PAGE_SIZE, total });
   })
@@ -137,14 +134,15 @@ adminRequestsRouter.get(
       params.push(assigneeEmail);
     }
     if (q) {
-      conditions.push('(requester_name LIKE ? OR request_code LIKE ? OR requester_email LIKE ?)');
+      conditions.push('(requester_name ILIKE ? OR request_code ILIKE ? OR requester_email ILIKE ?)');
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const rows = db
-      .prepare(`SELECT status, COUNT(*) AS count FROM requests ${where} GROUP BY status`)
-      .all(...params);
+    const rows = await db.all(
+      `SELECT status, COUNT(*) AS count FROM requests ${where} GROUP BY status`,
+      params
+    );
 
     const counts = {};
     rows.forEach((r) => {
@@ -157,31 +155,33 @@ adminRequestsRouter.get(
 adminRequestsRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {
-    const request = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
+    const request = await db.get(`${LIST_SELECT} WHERE requests.id = ?`, [req.params.id]);
 
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
-    const history = db
-      .prepare('SELECT * FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC')
-      .all(req.params.id);
+    const history = await db.all(
+      'SELECT * FROM request_status_history WHERE request_id = ? ORDER BY changed_at ASC',
+      [req.params.id]
+    );
 
-    const emailLog = db
-      .prepare('SELECT * FROM email_log WHERE request_id = ? ORDER BY created_at ASC')
-      .all(req.params.id);
+    const emailLog = await db.all(
+      'SELECT * FROM email_log WHERE request_id = ? ORDER BY created_at ASC',
+      [req.params.id]
+    );
 
-    const attachments = db
-      .prepare('SELECT id, original_name, mime_type, size_bytes, created_at FROM request_attachments WHERE request_id = ? ORDER BY created_at ASC')
-      .all(req.params.id);
+    const attachments = await db.all(
+      'SELECT id, original_name, mime_type, size_bytes, created_at FROM request_attachments WHERE request_id = ? ORDER BY created_at ASC',
+      [req.params.id]
+    );
 
-    const auditLog = db
-      .prepare(
-        `SELECT audit_logs.*, admin_users.full_name AS actor_name, admin_users.username AS actor_username
-         FROM audit_logs
-         LEFT JOIN admin_users ON admin_users.id = audit_logs.actor_id
-         WHERE audit_logs.request_id = ?
-         ORDER BY audit_logs.created_at ASC`
-      )
-      .all(req.params.id);
+    const auditLog = await db.all(
+      `SELECT audit_logs.*, admin_users.full_name AS actor_name, admin_users.username AS actor_username
+       FROM audit_logs
+       LEFT JOIN admin_users ON admin_users.id = audit_logs.actor_id
+       WHERE audit_logs.request_id = ?
+       ORDER BY audit_logs.created_at ASC`,
+      [req.params.id]
+    );
 
     res.json({ ...request, history, emailLog, attachments, auditLog });
   })
@@ -190,9 +190,10 @@ adminRequestsRouter.get(
 adminRequestsRouter.get(
   '/:id/attachments/:attachmentId',
   asyncHandler(async (req, res) => {
-    const attachment = db
-      .prepare('SELECT * FROM request_attachments WHERE id = ? AND request_id = ?')
-      .get(req.params.attachmentId, req.params.id);
+    const attachment = await db.get(
+      'SELECT * FROM request_attachments WHERE id = ? AND request_id = ?',
+      [req.params.attachmentId, req.params.id]
+    );
 
     if (!attachment) return res.status(404).json({ error: 'Không tìm thấy tệp đính kèm.' });
 
@@ -220,33 +221,37 @@ adminRequestsRouter.patch(
       });
     }
 
-    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    const request = await db.get('SELECT * FROM requests WHERE id = ?', [req.params.id]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
     if (status === 'resolved_pending') {
-      db.prepare(
+      await db.run(
         `UPDATE requests
-         SET status = ?, admin_notes = ?, resolved_at = datetime('now'),
-             confirm_reminder_sent_at = NULL, updated_at = datetime('now')
-         WHERE id = ?`
-      ).run(status, note || null, req.params.id);
+         SET status = ?, admin_notes = ?, resolved_at = now(),
+             confirm_reminder_sent_at = NULL, updated_at = now()
+         WHERE id = ?`,
+        [status, note || null, req.params.id]
+      );
     } else if (status === 'in_progress') {
-      db.prepare(
+      await db.run(
         `UPDATE requests
-         SET status = ?, admin_notes = ?, inprogress_reminder_sent_at = NULL, updated_at = datetime('now')
-         WHERE id = ?`
-      ).run(status, note || null, req.params.id);
+         SET status = ?, admin_notes = ?, inprogress_reminder_sent_at = NULL, updated_at = now()
+         WHERE id = ?`,
+        [status, note || null, req.params.id]
+      );
     } else {
-      db.prepare(
-        "UPDATE requests SET status = ?, admin_notes = ?, updated_at = datetime('now') WHERE id = ?"
-      ).run(status, note || null, req.params.id);
+      await db.run(
+        "UPDATE requests SET status = ?, admin_notes = ?, updated_at = now() WHERE id = ?",
+        [status, note || null, req.params.id]
+      );
     }
 
-    db.prepare(
-      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
-    ).run(req.params.id, status, note || null);
+    await db.run(
+      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)',
+      [req.params.id, status, note || null]
+    );
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'status_change',
@@ -284,7 +289,7 @@ adminRequestsRouter.patch(
       return res.status(400).json({ error: 'Vui lòng ghi rõ lý do xác nhận thay.' });
     }
 
-    const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    const request = await db.get('SELECT * FROM requests WHERE id = ?', [req.params.id]);
     if (!request) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
     if (request.status !== 'resolved_pending') {
       return res.status(400).json({ error: 'Yêu cầu này không ở trạng thái chờ xác nhận.' });
@@ -292,9 +297,11 @@ adminRequestsRouter.patch(
     if (!request.resolved_at) {
       return res.status(400).json({ error: 'Yêu cầu chưa có mốc thời gian xử lý hợp lệ.' });
     }
-    const resolvedAt = new Date(`${request.resolved_at.replace(' ', 'T')}Z`);
-    const { reminder_days: reminderDays } = getSlaRule(request.request_type_id, request.priority);
-    if (workingDaysSince(resolvedAt) < reminderDays) {
+    // resolved_at giờ là cột TIMESTAMPTZ — driver pg trả thẳng về JS Date, không còn là chuỗi
+    // text kiểu SQLite nữa nên không cần tự ghép "T"/"Z" như trước.
+    const resolvedAt = request.resolved_at;
+    const { reminder_days: reminderDays } = await getSlaRule(request.request_type_id, request.priority);
+    if ((await workingDaysSince(resolvedAt)) < reminderDays) {
       return res.status(400).json({
         error: `Chỉ có thể xác nhận thay sau ${reminderDays} ngày làm việc kể từ khi đánh dấu đã xử lý, để người gửi có cơ hội tự phản hồi trước.`,
       });
@@ -303,18 +310,20 @@ adminRequestsRouter.patch(
     const adminUsername = req.session.adminUsername;
     const note = `Xác nhận thay bởi quản trị viên (${adminUsername}) — lý do: ${reason}`;
 
-    db.prepare(
+    await db.run(
       `UPDATE requests
-       SET status = 'done', requester_confirmed_at = datetime('now'), confirmed_by = 'delegate',
-           updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(req.params.id);
+       SET status = 'done', requester_confirmed_at = now(), confirmed_by = 'delegate',
+           updated_at = now()
+       WHERE id = ?`,
+      [req.params.id]
+    );
 
-    db.prepare(
-      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', ?)"
-    ).run(req.params.id, note);
+    await db.run(
+      "INSERT INTO request_status_history (request_id, status, note) VALUES (?, 'done', ?)",
+      [req.params.id, note]
+    );
 
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'confirm_on_behalf',
@@ -333,7 +342,7 @@ adminRequestsRouter.patch(
 adminRequestsRouter.patch(
   '/:id/details',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM requests WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
     const { requesterName, departmentId, requestTypeId, processingTimeId, requesterEmail, description } =
@@ -350,15 +359,15 @@ adminRequestsRouter.patch(
       errors.push('Vui lòng nhập email hợp lệ.');
     }
 
-    const dept = db.prepare('SELECT id FROM departments WHERE id = ?').get(departmentId);
+    const dept = await db.get('SELECT id FROM departments WHERE id = ?', [departmentId]);
     if (!dept) errors.push('Khoa/phòng/đơn vị không hợp lệ.');
 
-    const type = db.prepare('SELECT id FROM request_types WHERE id = ?').get(requestTypeId);
+    const type = await db.get('SELECT id FROM request_types WHERE id = ?', [requestTypeId]);
     if (!type) errors.push('Loại yêu cầu không hợp lệ.');
 
-    const processingTime = db
-      .prepare('SELECT id FROM processing_times WHERE id = ?')
-      .get(processingTimeId);
+    const processingTime = await db.get('SELECT id FROM processing_times WHERE id = ?', [
+      processingTimeId,
+    ]);
     if (!processingTime) errors.push('Thời gian xử lý mong muốn không hợp lệ.');
 
     if (errors.length) {
@@ -374,22 +383,23 @@ adminRequestsRouter.patch(
       description: String(description).trim(),
     };
 
-    db.prepare(
+    await db.run(
       `UPDATE requests
        SET requester_name = ?, department_id = ?, request_type_id = ?, processing_time_id = ?,
-           requester_email = ?, description = ?, updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(
-      next.requester_name,
-      next.department_id,
-      next.request_type_id,
-      next.processing_time_id,
-      next.requester_email,
-      next.description,
-      req.params.id
+           requester_email = ?, description = ?, updated_at = now()
+       WHERE id = ?`,
+      [
+        next.requester_name,
+        next.department_id,
+        next.request_type_id,
+        next.processing_time_id,
+        next.requester_email,
+        next.description,
+        req.params.id,
+      ]
     );
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'edit_info',
@@ -406,7 +416,7 @@ adminRequestsRouter.patch(
 adminRequestsRouter.patch(
   '/:id/priority',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM requests WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
     const { priority } = req.body || {};
@@ -414,12 +424,12 @@ adminRequestsRouter.patch(
       return res.status(400).json({ error: 'Mức độ ưu tiên không hợp lệ.' });
     }
 
-    db.prepare("UPDATE requests SET priority = ?, updated_at = datetime('now') WHERE id = ?").run(
+    await db.run('UPDATE requests SET priority = ?, updated_at = now() WHERE id = ?', [
       priority,
-      req.params.id
-    );
+      req.params.id,
+    ]);
 
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'priority_change',
@@ -435,7 +445,7 @@ adminRequestsRouter.patch(
 adminRequestsRouter.patch(
   '/:id/assign',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM requests WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
     const { assigneeName, assigneeEmail, assigneePhone } = req.body || {};
@@ -459,24 +469,20 @@ adminRequestsRouter.patch(
       assignee_phone: assigneePhone ? String(assigneePhone).trim() : null,
     };
 
-    db.prepare(
+    await db.run(
       `UPDATE requests
-       SET assignee_name = ?, assignee_email = ?, assignee_phone = ?, assigned_at = datetime('now'),
-           status = ?, inprogress_reminder_sent_at = NULL, updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(
-      next.assignee_name,
-      next.assignee_email,
-      next.assignee_phone,
-      nextStatus,
-      req.params.id
+       SET assignee_name = ?, assignee_email = ?, assignee_phone = ?, assigned_at = now(),
+           status = ?, inprogress_reminder_sent_at = NULL, updated_at = now()
+       WHERE id = ?`,
+      [next.assignee_name, next.assignee_email, next.assignee_phone, nextStatus, req.params.id]
     );
 
-    db.prepare(
-      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)'
-    ).run(req.params.id, nextStatus, `Đã phân công cho ${trimmedName} xử lý`);
+    await db.run(
+      'INSERT INTO request_status_history (request_id, status, note) VALUES (?, ?, ?)',
+      [req.params.id, nextStatus, `Đã phân công cho ${trimmedName} xử lý`]
+    );
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'assign',
@@ -485,7 +491,7 @@ adminRequestsRouter.patch(
       fields: ['assignee_name', 'assignee_email', 'assignee_phone'],
     });
 
-    const updated = db.prepare(`${LIST_SELECT} WHERE requests.id = ?`).get(req.params.id);
+    const updated = await db.get(`${LIST_SELECT} WHERE requests.id = ?`, [req.params.id]);
     const emailResult = await sendAssignmentEmails(updated);
 
     res.json({ ok: true, ...emailResult });
@@ -495,19 +501,22 @@ adminRequestsRouter.patch(
 adminRequestsRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT id, request_code, requester_name FROM requests WHERE id = ?').get(req.params.id);
+    const existing = await db.get(
+      'SELECT id, request_code, requester_name FROM requests WHERE id = ?',
+      [req.params.id]
+    );
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy yêu cầu.' });
 
     // Ghi audit TRƯỚC khi xoá — audit_logs.request_id có ON DELETE SET NULL nên dòng này vẫn
     // còn lại sau khi requests bị xoá (chỉ mất liên kết request_id), giữ lại bằng chứng đã xoá.
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       requestId: Number(req.params.id),
       action: 'delete',
       oldValue: `${existing.request_code} — ${existing.requester_name}`,
     });
 
-    db.prepare('DELETE FROM requests WHERE id = ?').run(req.params.id);
+    await db.run('DELETE FROM requests WHERE id = ?', [req.params.id]);
 
     const dir = path.join(uploadsDir, req.params.id);
     fs.rm(dir, { recursive: true, force: true }, () => {});

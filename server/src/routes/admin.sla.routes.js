@@ -18,7 +18,7 @@ const LIST_SELECT = `
 adminSlaRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = db.prepare(`${LIST_SELECT} ORDER BY sla_rules.id DESC`).all();
+    const rows = await db.all(`${LIST_SELECT} ORDER BY sla_rules.id DESC`);
     res.json(rows);
   })
 );
@@ -39,13 +39,12 @@ adminSlaRouter.post(
     if (errors.length) return res.status(400).json({ error: errors.join(' ') });
 
     try {
-      const info = db
-        .prepare(
-          `INSERT INTO sla_rules (request_type_id, priority, reminder_days, timeout_days)
-           VALUES (?, ?, ?, ?)`
-        )
-        .run(Number(requestTypeId), priority || null, Number(reminderDays), Number(timeoutDays));
-      logAudit({
+      const info = await db.run(
+        `INSERT INTO sla_rules (request_type_id, priority, reminder_days, timeout_days)
+         VALUES (?, ?, ?, ?) RETURNING id`,
+        [Number(requestTypeId), priority || null, Number(reminderDays), Number(timeoutDays)]
+      );
+      await logAudit({
         actorId: req.session.adminId,
         action: 'sla_rule_change',
         fieldName: 'sla_rules.created',
@@ -53,7 +52,7 @@ adminSlaRouter.post(
       });
       res.status(201).json({ id: info.lastInsertRowid });
     } catch (err) {
-      if (String(err.message).includes('UNIQUE')) {
+      if (err.code === '23505') {
         return res.status(409).json({ error: 'Đã có rule cho tổ hợp loại yêu cầu + mức ưu tiên này.' });
       }
       throw err;
@@ -64,7 +63,7 @@ adminSlaRouter.post(
 adminSlaRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM sla_rules WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM sla_rules WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
     const { reminderDays, timeoutDays } = req.body || {};
@@ -79,11 +78,12 @@ adminSlaRouter.patch(
       return res.status(400).json({ error: 'Số ngày tự đóng phải là số nguyên dương.' });
     }
 
-    db.prepare(
-      "UPDATE sla_rules SET reminder_days = ?, timeout_days = ?, updated_at = datetime('now') WHERE id = ?"
-    ).run(next.reminder_days, next.timeout_days, req.params.id);
+    await db.run(
+      'UPDATE sla_rules SET reminder_days = ?, timeout_days = ?, updated_at = now() WHERE id = ?',
+      [next.reminder_days, next.timeout_days, req.params.id]
+    );
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       action: 'sla_rule_change',
       oldRow: existing,
@@ -98,9 +98,9 @@ adminSlaRouter.patch(
 adminSlaRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const info = db.prepare('DELETE FROM sla_rules WHERE id = ?').run(req.params.id);
+    const info = await db.run('DELETE FROM sla_rules WHERE id = ?', [req.params.id]);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
-    logAudit({ actorId: req.session.adminId, action: 'sla_rule_change', fieldName: 'sla_rules.deleted' });
+    await logAudit({ actorId: req.session.adminId, action: 'sla_rule_change', fieldName: 'sla_rules.deleted' });
     res.json({ ok: true });
   })
 );

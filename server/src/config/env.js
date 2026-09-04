@@ -7,6 +7,9 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 export const env = {
   port: Number(process.env.PORT) || 4000,
+  // PostgreSQL (thay cho SQLite trước đây) — xem server/src/db/index.js.
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://hotro:hotro@localhost:5432/hotro_dev',
+  dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
   nodeEnv: process.env.NODE_ENV || 'development',
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
   appUrl: (process.env.APP_URL || 'https://hotrohuph.site').replace(/\/+$/, ''),
@@ -43,6 +46,13 @@ export const env = {
     minGroupSize: Number(process.env.FAQ_CANDIDATE_MIN_GROUP_SIZE) || 3,
     sweepIntervalHours: Number(process.env.FAQ_CANDIDATE_SWEEP_INTERVAL_HOURS) || 24,
   },
+  // Chặn spam từ ngoài trường: chỉ nhận yêu cầu từ email thuộc (các) domain công vụ, ví dụ
+  // "huph.edu.vn" — để trống thì KHÔNG giới hạn gì (giữ hành vi cũ). Nhiều domain cách nhau
+  // bằng dấu phẩy.
+  allowedEmailDomains: (process.env.ALLOWED_EMAIL_DOMAINS || '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean),
 };
 
 export const isSmtpConfigured = () =>

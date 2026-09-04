@@ -22,12 +22,13 @@ adminFaqRouter.get(
     const params = [];
     let where = '';
     if (q) {
-      where = 'WHERE (faq_entries.question LIKE ? OR faq_entries.answer LIKE ?)';
+      where = 'WHERE (faq_entries.question ILIKE ? OR faq_entries.answer ILIKE ?)';
       params.push(`%${q}%`, `%${q}%`);
     }
-    const rows = db
-      .prepare(`${LIST_SELECT} ${where} ORDER BY faq_entries.created_at DESC`)
-      .all(...params);
+    const rows = await db.all(
+      `${LIST_SELECT} ${where} ORDER BY faq_entries.created_at DESC`,
+      params
+    );
     res.json(rows);
   })
 );
@@ -43,19 +44,13 @@ adminFaqRouter.post(
       return res.status(400).json({ error: 'Vui lòng nhập câu trả lời.' });
     }
 
-    const info = db
-      .prepare(
-        `INSERT INTO faq_entries (question, answer, request_type_id, source_request_id)
-         VALUES (?, ?, ?, ?)`
-      )
-      .run(
-        String(question).trim(),
-        String(answer).trim(),
-        requestTypeId || null,
-        sourceRequestId || null
-      );
+    const info = await db.run(
+      `INSERT INTO faq_entries (question, answer, request_type_id, source_request_id)
+       VALUES (?, ?, ?, ?) RETURNING id`,
+      [String(question).trim(), String(answer).trim(), requestTypeId || null, sourceRequestId || null]
+    );
 
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       requestId: sourceRequestId || null,
       action: 'faq_change',
@@ -70,7 +65,7 @@ adminFaqRouter.post(
 adminFaqRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT * FROM faq_entries WHERE id = ?').get(req.params.id);
+    const existing = await db.get('SELECT * FROM faq_entries WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Không tìm thấy.' });
 
     const { question, answer, requestTypeId, active } = req.body || {};
@@ -85,13 +80,14 @@ adminFaqRouter.patch(
       return res.status(400).json({ error: 'Câu hỏi và câu trả lời không được để trống.' });
     }
 
-    db.prepare(
+    await db.run(
       `UPDATE faq_entries
-       SET question = ?, answer = ?, request_type_id = ?, active = ?, updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(next.question, next.answer, next.requestTypeId, next.active, req.params.id);
+       SET question = ?, answer = ?, request_type_id = ?, active = ?, updated_at = now()
+       WHERE id = ?`,
+      [next.question, next.answer, next.requestTypeId, next.active, req.params.id]
+    );
 
-    diffAndLog({
+    await diffAndLog({
       actorId: req.session.adminId,
       requestId: existing.source_request_id,
       action: 'faq_change',
@@ -107,10 +103,10 @@ adminFaqRouter.patch(
 adminFaqRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
-    const existing = db.prepare('SELECT question FROM faq_entries WHERE id = ?').get(req.params.id);
-    const info = db.prepare('DELETE FROM faq_entries WHERE id = ?').run(req.params.id);
+    const existing = await db.get('SELECT question FROM faq_entries WHERE id = ?', [req.params.id]);
+    const info = await db.run('DELETE FROM faq_entries WHERE id = ?', [req.params.id]);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy.' });
-    logAudit({
+    await logAudit({
       actorId: req.session.adminId,
       action: 'faq_change',
       fieldName: 'faq_entries.deleted',
