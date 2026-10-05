@@ -3,7 +3,7 @@
 Web app nội bộ: người dùng gửi yêu cầu hỗ trợ không cần đăng nhập, admin theo dõi
 tiến độ, cập nhật trạng thái và gửi email thông báo, xem thống kê.
 
-- **Backend**: Node.js + Express + SQLite (`better-sqlite3`)
+- **Backend**: Node.js + Express + PostgreSQL (`pg`) — xem CLAUDE.md và RESTORE.md
 - **Frontend**: React + Vite + Tailwind CSS
 - **Hosting**: tự host trên máy cá nhân (chạy 24/7), lộ ra internet qua Cloudflare Tunnel (miễn phí)
 
