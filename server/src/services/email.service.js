@@ -14,6 +14,8 @@ import { csatRequestEmail } from '../templates/csatRequestEmail.js';
 // Message-ID gốc dùng chung cho mọi email của cùng 1 yêu cầu (kèm subject giống nhau ở
 // các template), để mail client (Outlook, Apple Mail...) gom chúng vào chung 1 luồng hội thoại
 // qua header In-Reply-To/References, không chỉ dựa vào subject như Gmail.
+// Cố ý GIỮ tên miền cũ dù hệ thống đã chuyển sang hotro.huph.edu.vn: đây chỉ là chuỗi định danh
+// (không cần phân giải DNS), đổi đi sẽ làm email mới của các yêu cầu cũ tách khỏi luồng hội thoại.
 const MESSAGE_ID_DOMAIN = 'hotrohuph.site';
 const threadRootId = (requestId) => `<request-${requestId}@${MESSAGE_ID_DOMAIN}>`;
 

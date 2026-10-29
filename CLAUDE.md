@@ -1,17 +1,18 @@
-# CLAUDE.md — Cổng tiếp nhận hỗ trợ IT (hotrohuph.site)
+# CLAUDE.md — Cổng tiếp nhận hỗ trợ IT (hotro.huph.edu.vn)
 
 Tài liệu bàn giao cho Claude (và người) mở dự án này lần đầu hoặc sau khi cài lại máy. Đọc hết
 file này trước khi làm gì. **File này không chứa bí mật** — mật khẩu/API key nằm trong `.env`
 (không có trên GitHub), xem mục 3.
 
-Trạng thái ghi nhận: 2026-10-05, nhánh `main` = commit `f36e508` trở đi.
+Trạng thái ghi nhận: 2026-10-29 (chuyển lên Vercel + Neon, tên miền hotro.huph.edu.vn).
 
 ## 1. Dự án là gì
 
 ITSM nội bộ cho **Trường Đại học Y tế Công cộng** (HUPH): cán bộ/giảng viên gửi yêu cầu hỗ trợ IT
 **không cần đăng nhập**, trung tâm tin học (admin) tiếp nhận, phân công, xử lý, theo dõi SLA,
 thống kê; người gửi xác nhận/đánh giá qua trang tra cứu hoặc email. Giao diện **tiếng Việt**.
-Domain công khai: `https://hotrohuph.site` (qua Cloudflare Tunnel).
+Domain công khai DUY NHẤT: `https://hotro.huph.edu.vn` (Vercel). Tên miền cũ `hotrohuph.site`
+đã ngưng dùng từ 2026-10-29.
 
 - Người dùng nhắn bằng tiếng Việt, câu ngắn ("có" = đồng ý push). Trả lời bằng tiếng Việt.
 - Hệ thống đang chạy THẬT cho cả trường → cẩn thận với mọi thay đổi chạm production.
@@ -23,9 +24,9 @@ Domain công khai: `https://hotrohuph.site` (qua Cloudflare Tunnel).
   `connect-pg-simple`. Email: nodemailer (Gmail SMTP). AI: Google Gemini (`gemini-2.5-flash`).
 - **Frontend** `client/`: React 18 + Vite + Tailwind 3 (`darkMode:'class'`), React Router 7,
   Recharts, FontAwesome. Font **Be Vietnam Pro**. Trang admin được `React.lazy` code-split.
-- Production: Express phục vụ luôn `client/dist` (khi `NODE_ENV=production`) → **sửa client thì
-  `npm run build --workspace client`**, không cần restart server. Sửa server thì phải restart
-  (mục 4).
+- Production (Vercel): `client/dist` do CDN của Vercel phục vụ; mọi `/api/*` rewrite về 1 function
+  `api/index.js` (Express, migrate/seed mỗi cold start). Push lên `main` = tự deploy production.
+  `server/src/index.js` (app.listen + setInterval) chỉ còn dùng khi chạy local/dev.
 - npm workspaces: **chỉ có 1 `package-lock.json` ở gốc**. Chạy `npm install` ở gốc repo.
 - Public routes: `/` (form gửi yêu cầu), `/tra-cuu`, `/faq`. Admin: `/admin/*`
   (roles `super_admin` / `admin` / `handler`; handler chỉ thấy Tổng quan + Yêu cầu).
@@ -39,7 +40,27 @@ Domain công khai: `https://hotrohuph.site` (qua Cloudflare Tunnel).
 
 ## 3. Trạng thái triển khai hiện tại + bí mật nằm đâu
 
-Chạy trên **PC Windows cá nhân của người dùng** (`D:\Ho_Tro`), KHÔNG qua Docker:
+Từ **2026-10-29** chạy trên **Vercel** (project `hotrohuph`, team `c-abc3`, gói Hobby, region
+`sin1`) + **Neon Postgres** `hotro-db` (Singapore, gắn qua Vercel Marketplace):
+
+- Tên miền: `hotro.huph.edu.vn` — bản ghi A `216.198.79.1` trên Cloudflare (zone huph.edu.vn).
+  DNS nội bộ của trường (`db1.huph.edu.vn` / 192.168.1.250) là split-horizon, cần thêm bản ghi
+  tương tự thì máy trong mạng trường mới vào được.
+- Bí mật: biến môi trường trên Vercel (`vercel env ls`), không còn file `.env` trên máy chủ nào.
+  `DATABASE_URL` do Neon tự gắn. `APP_URL=https://hotro.huph.edu.vn`, `CRON_SECRET` tự sinh.
+- Job nền: Vercel Cron gọi `GET /api/cron/daily` lúc 08:00 giờ VN (`routes/cron.routes.js`) —
+  nhắc xác nhận, tự đóng, đề xuất FAQ, báo cáo tháng, dọn session. Gói Hobby chỉ cho cron 1 lần/ngày.
+- Ảnh đính kèm lưu trong Postgres (`request_attachments.data`, BYTEA — migration 001); client tự
+  nén ảnh, tổng tối đa 4MB (Vercel chặn request > 4.5MB).
+- Giờ: `api/_tz.js` đặt `TZ=Asia/Ho_Chi_Minh`; database Neon đặt `timezone = Asia/Ho_Chi_Minh`.
+- Dùng **Vercel CLI** (`vercel.cmd` trong PowerShell vì script .ps1 bị chặn), đăng nhập
+  `sonbeveve-hub`. Connector Vercel MCP từng trả 403 cho team này.
+- Mạng trường **chặn cổng 5432 ra ngoài** → psql/pg_restore tới Neon không chạy từ máy trong
+  trường; dùng driver `@neondatabase/serverless` qua WebSocket (cổng 443).
+- Dữ liệu khôi phục từ bản dump 2026-10-05 (dữ liệu sau ngày đó trên PC cũ đã mất).
+
+**Triển khai CŨ (trước 2026-10-29, đã ngưng — chỉ để tham khảo):** chạy trên **PC Windows cá
+nhân** (`D:\Ho_Tro`) + Cloudflare Tunnel, KHÔNG qua Docker:
 
 - Node chạy trực tiếp; PostgreSQL 16 cài native (service `postgresql-x64-16`), database
   `hotro_production`, role `hotro`. Chuỗi kết nối nằm trong `.env` → `DATABASE_URL`

@@ -5,7 +5,9 @@ tiến độ, cập nhật trạng thái và gửi email thông báo, xem thốn
 
 - **Backend**: Node.js + Express + PostgreSQL (`pg`) — xem CLAUDE.md và RESTORE.md
 - **Frontend**: React + Vite + Tailwind CSS
-- **Hosting**: tự host trên máy cá nhân (chạy 24/7), lộ ra internet qua Cloudflare Tunnel (miễn phí)
+- **Hosting**: Vercel (project `hotrohuph`) + Neon Postgres, tên miền `https://hotro.huph.edu.vn`
+  — xem mục 3 trong CLAUDE.md. Các phần bên dưới về tự host trên PC + Cloudflare Tunnel là cách
+  triển khai CŨ (trước 2026-10-29), chỉ giữ để tham khảo.
 
 ## 1. Cài đặt lần đầu
 

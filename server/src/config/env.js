@@ -16,7 +16,7 @@ export const env = {
   // Vercel Cron gửi kèm "Authorization: Bearer <CRON_SECRET>" — xem routes/cron.routes.js.
   cronSecret: process.env.CRON_SECRET || '',
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
-  appUrl: (process.env.APP_URL || 'https://hotrohuph.site').replace(/\/+$/, ''),
+  appUrl: (process.env.APP_URL || 'https://hotro.huph.edu.vn').replace(/\/+$/, ''),
   notifyCcEmail: process.env.NOTIFY_CC_EMAIL || '',
   smtp: {
     host: process.env.SMTP_HOST || '',

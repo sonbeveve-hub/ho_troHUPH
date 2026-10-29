@@ -19,3 +19,6 @@ server/dist/
 Thumbs.db
 .vercel
 .env*
+.agents/
+.claude/
+skills-lock.json

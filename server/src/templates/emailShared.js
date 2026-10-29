@@ -160,7 +160,7 @@ export function emailLayout({ eyebrow, title, tone = 'default', bodyHtml }) {
         </td></tr>
         <tr><td style="padding: 28px 32px 32px; font-size:14px; color:#1f2937; line-height:1.6;">${bodyHtml}</td></tr>
       </table>
-      <p style="text-align:center; color:#9CA3AF; font-size:11px; margin:16px 0 0; font-family:Arial,sans-serif;">Trung tâm Tin học — hotrohuph.site</p>
+      <p style="text-align:center; color:#9CA3AF; font-size:11px; margin:16px 0 0; font-family:Arial,sans-serif;">Trung tâm Tin học — hotro.huph.edu.vn</p>
     </div>
   `;
 }
