@@ -19,6 +19,7 @@ import { adminUsersRouter } from './routes/admin.users.routes.js';
 import { adminSlaRouter } from './routes/admin.sla.routes.js';
 import { adminHolidaysRouter } from './routes/admin.holidays.routes.js';
 import { adminFaqCandidatesRouter } from './routes/admin.faqCandidates.routes.js';
+import { cronRouter } from './routes/cron.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PgStore = connectPgSimple(session);
@@ -44,7 +45,9 @@ export function createApp() {
       store: new PgStore({
         pool,
         createTableIfMissing: true,
-        pruneSessionInterval: 15 * 60, // giây (khác better-sqlite3-session-store dùng ms)
+        // giây (khác better-sqlite3-session-store dùng ms). Trên Vercel tắt hẳn — serverless
+        // không giữ được setInterval; việc dọn phiên chạy trong cron (routes/cron.routes.js).
+        pruneSessionInterval: env.isVercel ? false : 15 * 60,
       }),
       secret: env.sessionSecret,
       resave: false,
@@ -82,8 +85,10 @@ export function createApp() {
   app.use('/api/admin/holidays', adminHolidaysRouter);
   app.use('/api/admin/faq-candidates', adminFaqCandidatesRouter);
   app.use('/api/admin', adminCategoriesRouter);
+  app.use('/api/cron', cronRouter);
 
-  if (env.nodeEnv === 'production') {
+  // Trên Vercel, client/dist do CDN của Vercel phục vụ (vercel.json), không đi qua Express.
+  if (env.nodeEnv === 'production' && !env.isVercel) {
     const clientDist = path.resolve(__dirname, '../../client/dist');
     app.use(express.static(clientDist));
     app.get('*', (req, res, next) => {

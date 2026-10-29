@@ -17,7 +17,8 @@ import { isGeminiConfigured, env } from '../config/env.js';
 
 export const publicRouter = Router();
 
-const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+// Vercel chặn request > 4.5MB trước khi tới Express; client đã tự nén ảnh (ImagePicker.jsx).
+const MAX_TOTAL_ATTACHMENT_BYTES = 4 * 1024 * 1024;
 const MAX_ATTACHMENT_COUNT = 10;
 
 const upload = multer({
@@ -35,7 +36,7 @@ function uploadImages(req, res, next) {
   upload.array('images', MAX_ATTACHMENT_COUNT)(req, res, (err) => {
     if (!err) return next();
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Mỗi ảnh không được vượt quá 20MB.' });
+      return res.status(400).json({ error: 'Mỗi ảnh không được vượt quá 4MB.' });
     }
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({ error: `Chỉ được đính kèm tối đa ${MAX_ATTACHMENT_COUNT} ảnh.` });
@@ -440,7 +441,7 @@ const AI_CONTEXT_SELECT = `
 `;
 
 function getAttachmentsFor(requestId) {
-  return db.all('SELECT stored_name, mime_type FROM request_attachments WHERE request_id = ?', [
+  return db.all('SELECT stored_name, mime_type, data FROM request_attachments WHERE request_id = ? AND data IS NOT NULL', [
     requestId,
   ]);
 }

@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import fs from 'node:fs';
-import path from 'node:path';
 import { db } from '../db/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
@@ -10,7 +8,6 @@ import {
   sendResolvedPendingEmail,
   sendCsatRequestEmail,
 } from '../services/email.service.js';
-import { getAttachmentFilePath, uploadsDir } from '../services/attachments.service.js';
 import { logAudit, diffAndLog } from '../services/audit.service.js';
 import { getSlaRule } from '../services/sla.service.js';
 import { workingDaysSince } from '../services/workingDays.service.js';
@@ -197,14 +194,13 @@ adminRequestsRouter.get(
 
     if (!attachment) return res.status(404).json({ error: 'Không tìm thấy tệp đính kèm.' });
 
-    const filePath = getAttachmentFilePath(req.params.id, attachment.stored_name);
-    if (!fs.existsSync(filePath)) {
+    if (!attachment.data) {
       return res.status(404).json({ error: 'Tệp không còn tồn tại trên máy chủ.' });
     }
 
     res.setHeader('Content-Type', attachment.mime_type);
     res.setHeader('Cache-Control', 'private, max-age=86400');
-    fs.createReadStream(filePath).pipe(res);
+    res.send(attachment.data);
   })
 );
 
@@ -516,10 +512,8 @@ adminRequestsRouter.delete(
       oldValue: `${existing.request_code} — ${existing.requester_name}`,
     });
 
+    // request_attachments có ON DELETE CASCADE nên ảnh đính kèm (lưu trong DB) bị xoá theo.
     await db.run('DELETE FROM requests WHERE id = ?', [req.params.id]);
-
-    const dir = path.join(uploadsDir, req.params.id);
-    fs.rm(dir, { recursive: true, force: true }, () => {});
 
     res.json({ ok: true });
   })

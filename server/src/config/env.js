@@ -11,6 +11,10 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL || 'postgresql://hotro:hotro@localhost:5432/hotro_dev',
   dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
   nodeEnv: process.env.NODE_ENV || 'development',
+  // Vercel tự đặt VERCEL=1 trong môi trường chạy function.
+  isVercel: Boolean(process.env.VERCEL),
+  // Vercel Cron gửi kèm "Authorization: Bearer <CRON_SECRET>" — xem routes/cron.routes.js.
+  cronSecret: process.env.CRON_SECRET || '',
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
   appUrl: (process.env.APP_URL || 'https://hotrohuph.site').replace(/\/+$/, ''),
   notifyCcEmail: process.env.NOTIFY_CC_EMAIL || '',

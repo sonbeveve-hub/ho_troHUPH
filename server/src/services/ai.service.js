@@ -1,7 +1,5 @@
-import fs from 'node:fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env, isGeminiConfigured } from '../config/env.js';
-import { getAttachmentFilePath } from './attachments.service.js';
 
 const MAX_IMAGES = 4;
 
@@ -14,7 +12,7 @@ function getClient() {
 
 function buildImageParts(requestId, attachments) {
   return attachments.slice(0, MAX_IMAGES).map((a) => {
-    const data = fs.readFileSync(getAttachmentFilePath(requestId, a.stored_name)).toString('base64');
+    const data = Buffer.from(a.data).toString('base64');
     return { inlineData: { data, mimeType: a.mime_type } };
   });
 }
